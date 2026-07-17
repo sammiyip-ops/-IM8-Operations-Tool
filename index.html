@@ -194,6 +194,16 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
         </div>
       </div>
     </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <label style="font-size:13px;font-weight:600;color:#555;white-space:nowrap">Warehouse location</label>
+      <select id="warehouseSelect" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;background:#fff;color:#111">
+        <option value="OPS-WH01">OPS-WH01</option>
+        <option value="OPS-WH02">OPS-WH02</option>
+        <option value="OPS-WH03">OPS-WH03</option>
+        <option value="USOPS-WH04">USOPS-WH04</option>
+        <option value="USOPS-WH05">USOPS-WH05</option>
+      </select>
+    </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
       <label style="font-size:13px;font-weight:600;color:#555;white-space:nowrap">Split into how many files?</label>
       <input type="number" id="splitCount" min="1" max="20" value="1" style="width:70px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;text-align:center">
@@ -1076,11 +1086,12 @@ function generate(){
       return (sku)=>{const p=planRef[sku];if(!p||!p.length)return '';const c=cursor[sku];if(c.idx>=p.length)return '';const seg=p[c.idx];c.used++;if(c.used>=seg.units){c.idx++;c.used=0;}return seg.batch;};
     };
     const getBatch=makeBatchGetter(plan);
+    const whCode=document.getElementById('warehouseSelect').value;
     const rows=[];let matched=0,blank=0;
     for(const r of fileRows){
       allOrderSet.add(r.order);const batch=getBatch(r.sku);
       if(batch)matched++;else{blank++;allBlankSkus.add(r.sku);}
-      rows.push({'Shipped date':todayStr,'Order ID':r.order,'AWB':r.tracking,'SKU Number':r.sku,'Warehouse location':'Prenetics~OPS-WH01~Primary','Batch Number':batch});
+      rows.push({'Shipped date':todayStr,'Order ID':r.order,'AWB':r.tracking,'SKU Number':r.sku,'Warehouse location':'Prenetics~'+whCode+'~Primary','Batch Number':batch});
     }
     totalMatched+=matched;totalBlank+=blank;totalRows+=rows.length;outputFiles.push(rows);
     ffLog(`File ${f+1}: ${rows.length} rows, ${ordersInFile.size} orders, ${blank} blank`+(blank>0?' ⚠️':''));
