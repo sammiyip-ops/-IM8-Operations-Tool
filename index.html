@@ -1,0 +1,3463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IM8 Operations Tool</title>
+<!-- xlsx-js-style: supports cell styles (borders, fills, fonts) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f5f5;color:#222;min-height:100vh}
+.topbar{background:#111;color:#fff;padding:14px 24px;font-size:16px;font-weight:600;position:sticky;top:0;z-index:50}
+.app-layout{display:flex;min-height:calc(100vh - 48px)}
+.sidebar{background:#222;width:200px;flex-shrink:0;padding:12px 0;position:sticky;top:0;height:100vh;overflow-y:auto;align-self:flex-start}
+.tab{padding:13px 20px;cursor:pointer;font-size:13px;color:#aaa;border-left:3px solid transparent;transition:all 0.15s;line-height:1.4}
+.tab.active{color:#fff;border-left-color:#fff;background:#333}
+.tab:hover:not(.active){color:#ddd;background:#2a2a2a}
+.tab-num{font-size:10px;color:#666;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.06em}
+.panels{flex:1;overflow:auto}
+.panel{display:none;padding:24px;max-width:1100px;margin:0 auto}
+.panel.active{display:block}
+.card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;padding:1.5rem;margin-bottom:1.5rem}
+.card-title{font-size:15px;font-weight:600;margin-bottom:1rem;color:#111}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+.section-label{font-size:11px;font-weight:600;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+.upload-zone{border:1.5px dashed #ccc;border-radius:10px;padding:1.2rem;text-align:center;cursor:pointer;background:#fafafa;transition:background 0.15s}
+.upload-zone:hover{background:#f0f0f0}
+.upload-zone.has-file{border-style:solid;border-color:#22c55e;background:#f0fdf4}
+.upload-zone input{display:none}
+.upload-icon{font-size:24px;margin-bottom:4px}
+.upload-label{font-size:12px;color:#999;margin-top:4px}
+.upload-name{font-size:12px;font-weight:500;color:#16a34a;margin-top:4px}
+button{padding:10px 20px;border-radius:8px;border:1px solid #d0d0d0;background:#fff;color:#222;cursor:pointer;font-size:14px;font-weight:500;transition:background 0.15s}
+button:hover{background:#f0f0f0}
+button:disabled{opacity:0.4;cursor:not-allowed}
+.btn-dark{background:#111;color:#fff;border-color:#111;width:100%;padding:12px;font-size:15px}
+.btn-dark:hover:not(:disabled){background:#333}
+.btn-green{background:#16a34a;color:#fff;border-color:#16a34a;width:100%;padding:12px;font-size:15px}
+.btn-green:hover{background:#15803d}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+.stat{background:#f8f8f8;border-radius:8px;padding:12px 14px;border:1px solid #eee}
+.stat-n{font-size:22px;font-weight:600}
+.stat-l{font-size:11px;color:#888;margin-top:2px}
+.s-ok{color:#16a34a}
+.s-warn{color:#d97706}
+.log{background:#1a1a1a;color:#e0e0e0;border-radius:8px;padding:1rem;font-size:12px;font-family:monospace;max-height:160px;overflow-y:auto;margin-bottom:1rem;line-height:1.8}
+.log-warn{color:#fbbf24}
+.hint{font-size:12px;color:#999;margin-top:8px;text-align:center}
+.view-toggle{display:flex;gap:8px;margin-bottom:1rem}
+.view-toggle button{padding:6px 16px;font-size:13px;width:auto}
+.view-toggle button.active{background:#111;color:#fff;border-color:#111}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f0f0f0;padding:7px 10px;text-align:left;font-weight:600;border-bottom:2px solid #ddd;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #eee;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-bundle{background:#eff6ff;color:#1d4ed8}
+.badge-standalone{background:#f0fdf4;color:#15803d}
+.hl-orange{background:#FFCC80!important;font-weight:700}
+.hl-orange-header{background:#FFCC80!important;font-weight:700}
+.row-subtotal td{background:#f0f0f0;font-weight:600;border-top:2px solid #ccc}
+.row-original td{background:#e8f5e9;font-weight:600}
+.row-total td{background:#fff3e0;font-weight:700;font-size:14px;border-top:2px solid #e65100}
+.row-extra td{background:#fafafa;color:#555}
+.row-grandtotal td{background:#ffe0b2;font-weight:700;border-top:2px solid #e65100}
+textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:13px;font-family:monospace;resize:vertical;min-height:120px}
+.input-tabs{display:flex;gap:0;margin-bottom:1rem;border:1px solid #ddd;border-radius:8px;overflow:hidden;width:fit-content}
+.input-tab{padding:7px 18px;font-size:13px;cursor:pointer;background:#f5f5f5;border:none;color:#555}
+.input-tab.active{background:#111;color:#fff}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;min-height:100%;background:rgba(0,0,0,0.65);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;backdrop-filter:none}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:1.5rem;max-width:480px;width:90%}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:0.5rem;color:#b45309}
+.modal p{font-size:13px;color:#555;margin-bottom:1rem}
+.modal ul{font-size:13px;margin-left:1.2rem;margin-bottom:1.2rem;line-height:2}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+.modal-btns button{width:auto}
+.table-wrap{overflow-x:auto}
+.sku-link{cursor:pointer;text-decoration:underline dotted;color:#1d4ed8}
+.sku-link:hover{color:#1e40af}
+.drill-modal{background:#fff;border-radius:12px;padding:1.5rem;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.drill-modal h3{font-size:15px;font-weight:700;margin-bottom:4px;color:#111}
+.drill-modal .sub{font-size:12px;color:#888;margin-bottom:1rem}
+.drill-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem}
+.drill-table th{background:#f0f0f0;padding:7px 10px;text-align:left;font-weight:600;border-bottom:2px solid #ddd}
+.drill-table td{padding:7px 10px;border-bottom:1px solid #eee}
+.drill-table tr:last-child td{border-bottom:none}
+.drill-total{font-weight:700;background:#fff3e0;padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:1rem}
+/* GPS tab specific */
+.gps-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.warn-tag{display:inline-block;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;margin-left:6px}
+.preview-table-wrap{overflow-x:auto;max-height:320px;overflow-y:auto;border-radius:8px;border:1px solid #e0e0e0}
+.preview-table-wrap table{font-size:12px}
+.preview-table-wrap th{position:sticky;top:0;z-index:1}
+.row-blank-dim td{background:#fff8e1}
+</style>
+</head>
+<body>
+<div class="topbar">📦 IM8 Operations Tool</div>
+<div class="app-layout">
+<div class="sidebar">
+  <div class="tab active" onclick="switchTab(0)"><span class="tab-num">Tab 1</span>Production Calculator</div>
+  <div class="tab" onclick="switchTab(1)"><span class="tab-num">Tab 2</span>Fulfillment Generator</div>
+  <div class="tab" onclick="switchTab(2)"><span class="tab-num">Tab 3</span>GPS Generator</div>
+  <div class="tab" onclick="switchTab(3)"><span class="tab-num">Tab 4</span>Production Forecast</div>
+  <div class="tab" onclick="switchTab(4)"><span class="tab-num">Tab 5</span>Gift Tracker</div>
+  <div class="tab" onclick="switchTab(5)"><span class="tab-num">Tab 6</span>Courier Splitter</div>
+</div>
+<div class="panels">
+
+<!-- TAB 1 -->
+<div class="panel active" id="tab0">
+  <div class="card">
+    <div class="card-title">Input — sales data</div>
+    <div class="input-tabs">
+      <button class="input-tab active" onclick="switchInput(0)">Upload file</button>
+      <button class="input-tab" onclick="switchInput(1)">Paste pivot table</button>
+    </div>
+    <div id="inputUpload">
+      <div class="upload-zone" id="prodZone" onclick="document.getElementById('prodFile').click()">
+        <input type="file" id="prodFile" accept=".xlsx,.xls,.csv">
+        <div class="upload-icon">📄</div>
+        <div>Click to upload sales sheet</div>
+        <div class="upload-label">.xlsx or .csv</div>
+        <div class="upload-name" id="prodFileName"></div>
+      </div>
+    </div>
+    <div id="inputPaste" style="display:none">
+      <div class="section-label">Paste two-column pivot (SKU tab Quantity)</div>
+      <textarea id="pasteArea" placeholder="IM8-FG-000035&#10;17&#10;IM8-FG-000124&#10;11&#10;...&#10;&#10;Or tab-separated:&#10;IM8-FG-000035	17"></textarea>
+    </div>
+    <br>
+    <div style="margin-bottom:12px">
+      <div class="section-label">🗂️ On-hand inventory <span style="font-weight:400;color:#aaa;font-size:11px">(optional — deducted from grand total to show net to produce)</span></div>
+      <div class="upload-zone" id="prodInvZone" onclick="document.getElementById('prodInvFile').click()" style="padding:0.8rem">
+        <input type="file" id="prodInvFile" accept=".xlsx,.xls,.csv">
+        <div style="font-size:13px">Click to upload on-hand inventory</div>
+        <div class="upload-label">.xlsx or .csv</div>
+        <div class="upload-name" id="prodInvFileName"></div>
+      </div>
+    </div>
+    <button class="btn-dark" id="calcBtn" disabled onclick="calculate()">Calculate production</button>
+    <button onclick="prodShowHistory()" style="margin-top:8px;width:100%;padding:10px;background:#f8f8f8;border:1px solid #ddd;border-radius:8px;font-size:13px;color:#555;cursor:pointer">🕒 History</button>
+  </div>
+
+  <div id="prodResults" style="display:none">
+    <div class="card">
+      <div class="view-toggle">
+        <button class="active" id="vBtn0" onclick="switchView(0)">Component totals</button>
+        <button id="vBtn1" onclick="switchView(1)">Full matrix</button>
+      </div>
+      <div id="view0">
+        <table>
+          <thead><tr>
+            <th onclick="prodToggleSkuSort()" id="prodSkuTh" style="cursor:pointer;user-select:none;white-space:nowrap">SKU <span id="prodSkuSortIcon" style="font-size:11px;opacity:0.7">↕</span></th><th>Type</th><th>Ordered (sales)</th><th>From bundles (sub total)</th><th>Grand total</th><th id="prodThOnHand" style="display:none">On-hand</th><th id="prodThNet" style="display:none;color:#d97706">Net to produce</th><th style="text-align:center;color:#888;font-size:11px">Done ✓</th>
+          </tr></thead>
+          <tbody id="totalsBody"></tbody>
+        </table>
+      </div>
+      <div id="view1" style="display:none">
+        <div class="table-wrap"><table id="matrixTable"></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div class="panel" id="tab1">
+  <div class="card">
+    <div class="card-title">Upload files</div>
+    <div class="grid2">
+      <div>
+        <div class="section-label">Sales sheet</div>
+        <div class="upload-zone" id="salesZone" onclick="document.getElementById('salesFile').click()">
+          <input type="file" id="salesFile" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">📄</div>
+          <div>Click to upload</div>
+          <div class="upload-label">.xlsx or .csv</div>
+          <div class="upload-name" id="salesName"></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">On hand inventory</div>
+        <div class="upload-zone" id="invZone" onclick="document.getElementById('invFile').click()">
+          <input type="file" id="invFile" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">🗂️</div>
+          <div>Click to upload</div>
+          <div class="upload-label">.xlsx or .csv</div>
+          <div class="upload-name" id="invName"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <label style="font-size:13px;font-weight:600;color:#555;white-space:nowrap">Split into how many files?</label>
+      <input type="number" id="splitCount" min="1" max="20" value="1" style="width:70px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-weight:600;text-align:center">
+      <span style="font-size:12px;color:#999">file(s) — batch assignments will be split cleanly per file</span>
+    </div>
+    <button class="btn-dark" id="generateBtn" disabled onclick="generate()">Generate fulfillment file</button>
+  </div>
+  <!-- AWB blank tracking warning banner -->
+  <div id="ffAwbBanner" style="display:none;margin-bottom:12px;border-radius:8px;overflow:hidden;border:2px solid #fca5a5">
+    <div style="background:#fee2e2;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:13px;color:#dc2626">⚠️ Blank AWB / Tracking Number</div>
+      <button onclick="document.getElementById('ffAwbBanner').style.display='none'" style="padding:2px 10px;font-size:11px;border-radius:4px;cursor:pointer;background:#fff;border:1px solid #fca5a5;color:#dc2626">Dismiss</button>
+    </div>
+    <div style="background:#fff5f5;padding:8px 14px">
+      <div style="font-size:11px;color:#991b1b;margin-bottom:6px">The following orders have no tracking number — please fill in AWB before dispatching:</div>
+      <div id="ffAwbList" style="line-height:2"></div>
+    </div>
+  </div>
+
+  <div class="stats" id="ffStats" style="display:none">
+    <div class="stat"><div class="stat-n" id="s-rows">0</div><div class="stat-l">Total rows</div></div>
+    <div class="stat"><div class="stat-n" id="s-orders">0</div><div class="stat-l">Orders</div></div>
+    <div class="stat"><div class="stat-n s-ok" id="s-ok">0</div><div class="stat-l">Batches matched</div></div>
+    <div class="stat"><div class="stat-n s-warn" id="s-warn">0</div><div class="stat-l">Batch blank</div></div>
+  </div>
+  <div class="log" id="ffLog" style="display:none"></div>
+  <div id="downloadBtns" style="display:none"></div>
+  <div class="hint" id="hint" style="display:none">Files save to your Downloads folder</div>
+</div>
+
+<!-- TAB 3: GPS GENERATOR -->
+<div class="panel" id="tab2">
+  <div class="card">
+    <div class="card-title">Upload daily sales sheet</div>
+    <div class="upload-zone" id="gpsZone" onclick="document.getElementById('gpsFile').click()">
+      <input type="file" id="gpsFile" accept=".xlsx,.xls,.csv">
+      <div class="upload-icon">📄</div>
+      <div>Click to upload sales spreadsheet</div>
+      <div class="upload-label">.xlsx or .csv</div>
+      <div class="upload-name" id="gpsFileName"></div>
+    </div>
+    <br>
+    <button class="btn-dark" id="gpsBtn" disabled onclick="generateGPS()">Generate GPS import file</button>
+  </div>
+
+  <div id="gpsResults" style="display:none">
+    <div class="card">
+      <div class="gps-stats" id="gpsStats">
+        <div class="stat"><div class="stat-n s-ok" id="g-orders">0</div><div class="stat-l">Orders</div></div>
+        <div class="stat"><div class="stat-n s-ok" id="g-auto">0</div><div class="stat-l">Dimensions auto-filled</div></div>
+        <div class="stat"><div class="stat-n s-warn" id="g-manual">0</div><div class="stat-l">Dimensions need manual fill ⚠️</div></div>
+      </div>
+      <div class="log" id="gpsLog"></div>
+      <div id="gpsDownloadBtn"></div>
+      <div class="hint" style="display:block;margin-top:8px">Yellow rows = dimensions need manual fill before import</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Preview</div>
+      <div class="preview-table-wrap">
+        <table id="gpsPreviewTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: PRODUCTION FORECAST -->
+<div class="panel" id="tab3">
+  <div class="card">
+    <div class="card-title">Upload files</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:1.5rem">
+      <div>
+        <div class="section-label">📋 Colleague's forecast <span style="font-weight:400;color:#aaa">(optional)</span></div>
+        <div class="upload-zone" id="fcFcstZone" onclick="document.getElementById('fcFcstFile').click()">
+          <input type="file" id="fcFcstFile" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">📋</div>
+          <div>Click to upload</div>
+          <div class="upload-label">SKU · Avg Daily · Product Name — if available</div>
+          <div class="upload-name" id="fcFcstName"></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">📊 Actual sales data <span style="font-weight:400;color:#aaa">(optional)</span></div>
+        <div class="upload-zone" id="fcSalesZone" onclick="document.getElementById('fcSalesFile').click()">
+          <input type="file" id="fcSalesFile" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">📄</div>
+          <div>Click to upload</div>
+          <div class="upload-label">Same format as Tab 1 & 3 — 1 or more weeks</div>
+          <div class="upload-name" id="fcSalesName"></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">🗂️ On-hand inventory</div>
+        <div class="upload-zone" id="fcInvZone" onclick="document.getElementById('fcInvFile').click()">
+          <input type="file" id="fcInvFile" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">🗂️</div>
+          <div>Click to upload</div>
+          <div class="upload-label">.xlsx or .csv</div>
+          <div class="upload-name" id="fcInvName"></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#555;margin-bottom:16px;padding:12px 16px;background:#f8f8f8;border-radius:8px;border:1px solid #eee;line-height:2">
+      <strong>Formula:</strong>
+      &nbsp;&nbsp;<strong>1 week</strong>: demand = actual sales &nbsp;|&nbsp;
+      <strong>2 weeks</strong>: weighted avg (60/40) &nbsp;|&nbsp;
+      <strong>3 weeks</strong>: weighted avg (50/30/20) &nbsp;|&nbsp;
+      <strong>4 weeks</strong>: weighted avg (40/30/20/10) &nbsp;|&nbsp; <strong style="color:#7c3aed">4+ weeks</strong>: exponential smoothing α × newest + (1−α) × prev<br>
+      If colleague forecast uploaded: demand = <strong>MAX(Avg Daily × 7, weighted sales avg)</strong> &nbsp;→&nbsp; Produce qty = <strong>MAX(demand − on-hand, 0)</strong><br>
+      <span style="color:#d97706">🔶 Orange</span> = sales exceeded forecast &nbsp;|&nbsp;
+      <span style="color:#dc2626">🔴 Red</span> = SKU missing from colleague forecast &nbsp;|&nbsp;
+      <span style="color:#6d28d9">🟣 OTP merged</span> = OTP-paired SKUs combined into one row
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd">
+      <span style="font-size:13px;font-weight:600;color:#0369a1;white-space:nowrap">📅 How many weeks of sales data are you uploading?</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="fcWeekBtns">
+        <button onclick="fcSetWeeks(1)" id="fcW-1" style="padding:5px 16px;font-size:13px;font-weight:600;background:#0369a1;color:#fff;border-color:#0369a1;border-radius:6px">1 week</button>
+        <button onclick="fcSetWeeks(2)" id="fcW-2" style="padding:5px 16px;font-size:13px;font-weight:600;border-radius:6px">2 weeks</button>
+        <button onclick="fcSetWeeks(3)" id="fcW-3" style="padding:5px 16px;font-size:13px;font-weight:600;border-radius:6px">3 weeks</button>
+        <button onclick="fcSetWeeks(4)" id="fcW-4" style="padding:5px 16px;font-size:13px;font-weight:600;border-radius:6px">4 weeks</button>
+        <button onclick="fcSetWeeks(99)" id="fcW-99" style="padding:5px 16px;font-size:13px;font-weight:600;border-radius:6px;border-color:#7c3aed;color:#7c3aed">4+ weeks ✦</button>
+      </div>
+      <div id="fcAlphaRow" style="display:none;align-items:center;gap:10px;margin-top:8px;padding:8px 12px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe">
+        <span style="font-size:12px;font-weight:600;color:#6d28d9;white-space:nowrap">Smoothing α</span>
+        <input type="range" id="fcAlpha" min="1" max="9" value="3" step="1" oninput="fcUpdateAlpha(this.value)" style="width:120px">
+        <span id="fcAlphaLabel" style="font-size:12px;font-weight:600;color:#6d28d9;min-width:30px">0.3</span>
+        <span style="font-size:11px;color:#7c3aed">← stable &nbsp;&nbsp; reactive →</span>
+        <span style="font-size:11px;color:#888;margin-left:8px">Formula: demand = α × newest week + (1−α) × previous smoothed</span>
+      </div>
+      <span style="font-size:12px;color:#0369a1;margin-top:6px;display:block">
+        <strong>1 wk</strong>: direct &nbsp;|&nbsp; <strong>2–3 wks</strong>: weighted avg (recent counts more) &nbsp;|&nbsp; <strong>4 wks</strong>: weighted avg (40/30/20/10) &nbsp;|&nbsp; <strong style="color:#7c3aed">4+ wks</strong>: exponential smoothing (α you control) &nbsp;|&nbsp; selected: <strong id="fcWeeksLabel">1 week</strong>
+      </span>
+    </div>
+    <button class="btn-dark" id="fcBtn" disabled onclick="runForecast()">Run forecast</button>
+  </div>
+
+  <div id="fcResults" style="display:none">
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem">
+        <div class="stat"><div class="stat-n" id="fc-skus">0</div><div class="stat-l">Total SKUs</div></div>
+        <div class="stat"><div class="stat-n s-warn" id="fc-produce">0</div><div class="stat-l">Need production</div></div>
+        <div class="stat"><div class="stat-n s-ok" id="fc-covered">0</div><div class="stat-l">Fully covered</div></div>
+        <div class="stat"><div class="stat-n" style="color:#d97706" id="fc-flagged">0</div><div class="stat-l">Sales exceeded forecast</div></div>
+        <div class="stat"><div class="stat-n" style="color:#dc2626" id="fc-missing">0</div><div class="stat-l">Missing from forecast</div></div>
+      </div>
+      <div id="fcDownloadBtn"></div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <!-- Filter chips row -->
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#fafafa;border-bottom:1px solid #e5e7eb;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-right:4px">Filter:</span>
+        <button onclick="fcSetFilter('all')" id="fcF-all" style="padding:4px 12px;font-size:12px;background:#111;color:#fff;border-color:#111;border-radius:20px;font-weight:600">All</button>
+        <button onclick="fcSetFilter('produce')" id="fcF-produce" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#fff8f0;border-color:#d97706;color:#92400e;font-weight:600">⚠️ Need production</button>
+        <button onclick="fcSetFilter('flagged')" id="fcF-flagged" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#fff8f0;border-color:#f59e0b;color:#78350f">🔶 Sales exceeded</button>
+        <button onclick="fcSetFilter('missing')" id="fcF-missing" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#fff5f5;border-color:#dc2626;color:#991b1b">🔴 Missing forecast</button>
+        <button onclick="fcSetFilter('covered')" id="fcF-covered" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#f0fdf4;border-color:#16a34a;color:#166534">✅ Covered</button>
+      </div>
+      <!-- Table scrolls inside fixed box, header always visible -->
+      <div style="overflow-y:auto;overflow-x:hidden;max-height:680px;width:100%">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+          <colgroup>
+            <col style="width:13%">  <!-- SKU -->
+            <col style="width:18%">  <!-- Product name -->
+            <col style="width:7%">   <!-- Avg Daily -->
+            <col style="width:9%">   <!-- Colleague forecast -->
+            <col style="width:8%">   <!-- Total sales -->
+            <col style="width:12%">  <!-- Next wk forecast -->
+            <col style="width:7%">   <!-- On-hand -->
+            <col style="width:8%">   <!-- Produce qty -->
+            <col style="width:10%">  <!-- Status -->
+          </colgroup>
+          <thead>
+            <tr style="background:#f0f0f0;position:sticky;top:0;z-index:5;box-shadow:0 2px 4px rgba(0,0,0,0.08)">
+              <th onclick="fcToggleSkuSort()" id="fcSkuTh" style="cursor:pointer;user-select:none;padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">SKU <span id="fcSkuSortIcon" style="font-size:10px;opacity:0.6">↕</span></th>
+              <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Product name</th>
+              <th id="fcTh-avgdaily" style="padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd">Avg Daily<br><span style="font-weight:400;font-size:9px;color:#888">colleague</span></th>
+              <th id="fcTh-weeklyfcst" style="padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd">Colleague fcst<br><span style="font-weight:400;font-size:9px;color:#888">Avg Daily × 7</span></th>
+              <th style="padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd">Total sales<br><span id="fcSalesPeriodLabel" style="font-weight:400;font-size:9px;color:#888">in period</span></th>
+              <th style="padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd">Next wk forecast<br><span id="fcMethodLabel" style="font-weight:400;font-size:9px;color:#888">—</span></th>
+              <th style="padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:#111;border-right:1px solid #ddd">On-hand</th>
+              <th style="padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:#d97706;border-right:1px solid #ddd">Produce qty</th>
+              <th style="padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:#111">Status</th>
+            </tr>
+          </thead>
+          <tbody id="fcTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TAB 5: GIFT TRACKER -->
+<div class="panel" id="tab4">
+  <div class="card">
+    <div class="card-title">Gift Tracking — expand items into rows</div>
+    <div style="font-size:12px;color:#555;margin-bottom:16px;padding:10px 14px;background:#f8f8f8;border-radius:8px;border:1px solid #eee;line-height:1.8">
+      Upload a <strong>CSV</strong> where column 9 contains multiple items in one cell (e.g. <code style="background:#f0f0f0;padding:1px 5px;border-radius:3px">IM8-FG-000143 x1, IM8-FG-000196 x2</code>).
+      Each item becomes its own row. Columns before and after are duplicated automatically.
+    </div>
+    <div class="upload-zone" id="giftZone" onclick="document.getElementById('giftFile').click()">
+      <input type="file" id="giftFile" accept=".csv">
+      <div class="upload-icon">📄</div>
+      <div>Click to upload CSV</div>
+      <div class="upload-label">.csv only</div>
+      <div class="upload-name" id="giftFileName"></div>
+    </div>
+    <br>
+    <button class="btn-dark" id="giftBtn" disabled onclick="runGiftTransform()">Transform file</button>
+  </div>
+
+  <div id="giftResults" style="display:none">
+    <div class="card">
+      <div class="gps-stats">
+        <div class="stat"><div class="stat-n s-ok" id="g-inputrows">0</div><div class="stat-l">Input rows</div></div>
+        <div class="stat"><div class="stat-n s-ok" id="g-outputrows">0</div><div class="stat-l">Output rows</div></div>
+        <div class="stat"><div class="stat-n s-warn" id="g-noparsed">0</div><div class="stat-l">Items without x qty</div></div>
+      </div>
+      <div style="margin-top:12px" id="giftDownloadBtn"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Preview <span style="font-weight:400;font-size:12px;color:#888">(first 20 rows)</span></div>
+      <div class="preview-table-wrap">
+        <table id="giftPreviewTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- PRODUCTION HISTORY MODAL -->
+<div id="prodHistoryModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:100%;max-width:900px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:#111">🕒 Production History</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="prodClearHistory()" style="padding:6px 14px;font-size:12px;background:#fff5f5;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer">🗑 Clear all</button>
+        <button onclick="document.getElementById('prodHistoryModal').style.display='none';document.body.style.overflow=''" style="padding:6px 14px;font-size:12px;border-radius:6px;cursor:pointer">✕ Close</button>
+      </div>
+    </div>
+    <div id="prodHistoryList" style="max-height:70vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+
+<!-- TAB 6: COURIER SPLITTER -->
+<div class="panel" id="tab5">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Courier Splitter — daily order assignment</div>
+      <button onclick="document.getElementById('courierSOP').style.display=document.getElementById('courierSOP').style.display==='none'?'block':'none'"
+        style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff8f0;border:1px solid #f59e0b;color:#92400e;font-weight:600">
+        📋 SOP Guide
+      </button>
+    </div>
+
+    <!-- SOP Guide panel -->
+    <div id="courierSOP" style="display:none;margin-bottom:16px;padding:16px;background:#fffbf0;border:1px solid #fde68a;border-radius:10px;font-size:12px;line-height:1.9;color:#374151">
+      <div style="font-weight:700;font-size:13px;color:#92400e;margin-bottom:10px">📋 Daily Courier Split — SOP</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-weight:700;color:#111;margin-bottom:6px">① Export from D365</div>
+          <div>Go to D365 → Order lines → Filter by today's date → Export to Excel. Save as the raw Order lines file.</div>
+          <br>
+          <div style="font-weight:700;color:#111;margin-bottom:6px">② Upload to this tab</div>
+          <div>Click the upload zone below and select the exported file. The tool reads: <strong>Shopify reference, Item number, Country/region, Quantity, Status</strong>.</div>
+          <br>
+          <div style="font-weight:700;color:#111;margin-bottom:6px">③ Review courier rules</div>
+          <div>Check the rule table. Adjust DHL conditions per country if today's split differs from default (e.g. include SGP single-item orders in DHL).</div>
+        </div>
+        <div>
+          <div style="font-weight:700;color:#111;margin-bottom:6px">④ Generate &amp; download</div>
+          <div>Click <strong>Generate courier Excel</strong>. Review the stats and country breakdown. Download the Excel file.</div>
+          <br>
+          <div style="font-weight:700;color:#111;margin-bottom:6px">⑤ Output file (8 sheets)</div>
+          <div>
+            <span style="display:inline-block;background:#f3f4f6;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">Sheet1</span> All + courier pivots &nbsp;
+            <span style="display:inline-block;background:#f3f4f6;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">all</span> All raw data<br>
+            <span style="display:inline-block;background:#fee2e2;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">FEDEX</span> FEDEX orders + sum pivot<br>
+            <span style="display:inline-block;background:#fef9c3;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">FEDEX NO TW</span> Excl. Taiwan + count pivot<br>
+            <span style="display:inline-block;background:#dbeafe;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">DHL</span> DHL orders + sum + count<br>
+            <span style="display:inline-block;background:#d1fae5;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">GPS</span> GPS orders<br>
+            <span style="display:inline-block;background:#ede9fe;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">SF</span> SF orders + sum + count<br>
+            <span style="display:inline-block;background:#f3f4f6;border-radius:4px;padding:1px 6px;margin:1px;font-family:monospace;font-size:11px">NEW</span> FEDEX(no TW) + DHL + SF count
+          </div>
+          <br>
+          <div style="font-weight:700;color:#111;margin-bottom:4px">⑥ DHL conditions explained</div>
+          <div>
+            <strong>Single SKU</strong> — 1 unique product in the order<br>
+            <strong>Total qty = 1</strong> — total units ordered = 1<br>
+            <strong>Not a duplicate order</strong> — Shopify ref appears only once in file (= single line)<br>
+            <strong>Not quarterly subscription</strong> — no FG-000236 to FG-000243<br>
+            <span style="color:#6b7280">All ticked conditions must be met (AND logic)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:#555;margin-bottom:16px;padding:10px 14px;background:#f8f8f8;border-radius:8px;border:1px solid #eee;line-height:1.8">
+      Upload the raw <strong>Order lines</strong> export from D365. The tool assigns each order to a courier and generates the pivot Excel file (8 sheets) for printing.
+    </div>
+    <!-- Courier Rule Editor -->
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title" style="margin:0">Courier rules <span style="font-weight:400;font-size:12px;color:#888">(edit per run)</span></div>
+        <button onclick="courierAddRow()" style="padding:4px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:#f8f8f8;border:1px solid #ddd;color:#333">+ Add country</button>
+      </div>
+      <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="courierRuleTable">
+          <thead>
+            <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
+              <th style="padding:8px 12px;text-align:left;color:#374151;font-weight:600">Country code</th>
+              <th style="padding:8px 12px;text-align:left;color:#374151;font-weight:600">Default courier</th>
+              <th style="padding:8px 12px;text-align:left;color:#374151;font-weight:600">DHL conditions <span style="font-weight:400;color:#9ca3af">(if any box ticked, matching orders go DHL)</span></th>
+              <th style="padding:8px 12px;text-align:center;color:#374151;font-weight:600"></th>
+            </tr>
+          </thead>
+          <tbody id="courierRuleBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:#888;margin-top:6px">
+        💡 DHL conditions are AND logic — all ticked conditions must be met for an order to go DHL. If none ticked, all orders go to default courier.
+      </div>
+    </div>
+    <div class="upload-zone" id="courierZone" onclick="document.getElementById('courierFile').click()">
+      <input type="file" id="courierFile" accept=".xlsx,.xls,.csv">
+      <div class="upload-icon">📦</div>
+      <div>Click to upload Order lines export</div>
+      <div class="upload-label">.xlsx or .csv — same format as D365 export</div>
+      <div class="upload-name" id="courierFileName"></div>
+    </div>
+    <br>
+    <div style="display:flex;gap:8px;margin-top:0">
+      <button class="btn-dark" id="courierBtn" disabled onclick="runCourierSplit()" style="flex:1">Generate courier Excel</button>
+      <button onclick="courierShowHistory()" style="padding:10px 16px;font-size:13px;border-radius:8px;cursor:pointer;background:#f8f8f8;border:1px solid #ddd;color:#555;white-space:nowrap">🕒 History</button>
+    </div>
+  </div>
+  <!-- AUS Customs Warning Banner — stays visible after generate -->
+  <div id="ausCustomsBanner" style="display:none;margin-bottom:16px;border-radius:10px;overflow:hidden;border:2px solid #f59e0b">
+    <div style="background:#fef3c7;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:13px;color:#92400e">⚠️ AUS Customs Warning — Exceeds 3-Month Supply</div>
+      <button onclick="document.getElementById('ausCustomsBanner').style.display='none'" 
+        style="padding:2px 10px;font-size:11px;border-radius:4px;cursor:pointer;background:#fff;border:1px solid #f59e0b;color:#92400e">Dismiss</button>
+    </div>
+    <div style="background:#fffbf0;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#fef3c7;border-bottom:1px solid #fde68a">
+            <th style="padding:7px 12px;text-align:left;color:#92400e;font-weight:600">Shopify ref</th>
+            <th style="padding:7px 12px;text-align:left;color:#92400e;font-weight:600">SKUs ordered</th>
+            <th style="padding:7px 12px;text-align:left;color:#92400e;font-weight:600">Issue</th>
+          </tr>
+        </thead>
+        <tbody id="ausCustomsBannerBody"></tbody>
+      </table>
+    </div>
+    <div style="background:#fef3c7;padding:8px 16px;font-size:11px;color:#78350f;border-top:1px solid #fde68a">
+      💡 These orders are <strong>not automatically changed</strong> — review and decide whether to split, cancel, or proceed.
+    </div>
+  </div>
+
+  <div id="courierResults" style="display:none">
+    <div class="card">
+      <div class="gps-stats">
+        <div class="stat"><div class="stat-n s-ok" id="cr-total">0</div><div class="stat-l">Total orders</div></div>
+        <div class="stat"><div class="stat-n" style="color:#ef4444" id="cr-fedex">0</div><div class="stat-l">FEDEX</div></div>
+        <div class="stat"><div class="stat-n" style="color:#3b82f6" id="cr-dhl">0</div><div class="stat-l">DHL</div></div>
+        <div class="stat"><div class="stat-n" style="color:#8b5cf6" id="cr-sf">0</div><div class="stat-l">SF</div></div>
+        <div class="stat"><div class="stat-n" style="color:#f59e0b" id="cr-gps">0</div><div class="stat-l">GPS</div></div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee">
+        <div style="font-size:11px;font-weight:600;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Orders by country</div>
+        <div id="cr-country-breakdown" style="line-height:1.8"></div>
+      </div>
+      <div style="margin-top:12px" id="courierDownloadBtn"></div>
+    </div>
+    <!-- Preview table -->
+    <div class="card">
+      <div class="card-title">SKU summary <span style="font-weight:400;font-size:12px;color:#888">(Sum of Quantity per courier)</span></div>
+      <div class="preview-table-wrap" id="courierPreviewWrap">
+        <table id="courierPreviewTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- COURIER HISTORY MODAL -->
+<div id="courierHistoryModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:100%;max-width:900px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:#111">🕒 Courier History</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="courierClearHistory()" style="padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff5f5;border:1px solid #fca5a5;color:#dc2626">🗑 Clear</button>
+        <button onclick="document.getElementById('courierHistoryModal').style.display='none';document.body.style.overflow=''" style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer">✕ Close</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      <div style="display:flex;gap:6px">
+        <button id="chViewWeek" onclick="courierHistoryView('week')" style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer;background:#111;color:#fff;border-color:#111">Weekly</button>
+        <button id="chViewMonth" onclick="courierHistoryView('month')" style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer">Monthly</button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button id="chTypeBar" onclick="courierHistoryType('bar')" style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer;background:#111;color:#fff;border-color:#111">Bar</button>
+        <button id="chTypeLine" onclick="courierHistoryType('line')" style="padding:5px 14px;font-size:12px;border-radius:6px;cursor:pointer">Line</button>
+      </div>
+      <div id="chCountryFilters" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- Chart -->
+    <div style="position:relative;height:320px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px;padding:12px">
+      <canvas id="courierHistoryChart"></canvas>
+      <div id="chNoData" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#999;font-size:14px">No history data yet — upload order lines to start tracking</div>
+    </div>
+
+    <!-- Summary table -->
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="chSummaryTable">
+        <thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
+          <th style="padding:8px 12px;text-align:left;color:#374151">Period</th>
+          <th style="padding:8px 12px;text-align:right;color:#374151">Total orders</th>
+          <th style="padding:8px 12px;text-align:right;color:#ef4444">FEDEX</th>
+          <th style="padding:8px 12px;text-align:right;color:#3b82f6">DHL</th>
+          <th style="padding:8px 12px;text-align:right;color:#7c3aed">SF</th>
+          <th style="padding:8px 12px;text-align:right;color:#f59e0b">GPS</th>
+        </tr></thead>
+        <tbody id="chSummaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .panels -->
+</div><!-- end .app-layout -->
+
+<!-- BLANK BATCH MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>⚠️ Blank batch numbers detected</h3>
+    <p>These SKUs have insufficient stock — batch number will be blank:</p>
+    <ul id="modalList"></ul>
+    <div class="modal-btns">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="btn-green" style="width:auto" onclick="closeModalAndDownload()">Download anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRILL-DOWN MODAL -->
+<div class="modal-overlay" id="drillOverlay" onclick="if(event.target===this)closeDrill()">
+  <div class="drill-modal">
+    <h3 id="drillTitle"></h3>
+    <div class="sub" id="drillSub"></div>
+    <table class="drill-table">
+      <thead><tr><th>Bundle SKU</th><th>Bundle qty ordered</th><th>Component ratio</th><th>Contribution</th></tr></thead>
+      <tbody id="drillBody"></tbody>
+    </table>
+    <div class="drill-total" id="drillTotal"></div>
+    <div style="text-align:right"><button onclick="closeDrill()" style="width:auto">Close</button></div>
+  </div>
+</div>
+
+<script>
+// ─── SHARED ────────────────────────────────────────────────────────────────
+const SKU_MATRIX={
+  'IM8-FG-000219':[{s:'IM8-FG-000200',q:1},{s:'IM8-FG-000124',q:1}],
+  'IM8-FG-000220':[{s:'IM8-FG-000187',q:1},{s:'IM8-FG-000124',q:1}],
+  'IM8-FG-000221':[{s:'IM8-FG-000188',q:1},{s:'IM8-FG-000124',q:1}],
+  'IM8-FG-000222':[{s:'IM8-FG-000196',q:1},{s:'IM8-FG-000124',q:1}],
+  'IM8-FG-000224':[{s:'IM8-FG-000200',q:3}],
+  'IM8-FG-000225':[{s:'IM8-FG-000200',q:3},{s:'IM8-FG-000124',q:3}],
+  'IM8-FG-000226':[{s:'IM8-FG-000200',q:2}],
+  'IM8-FG-000227':[{s:'IM8-FG-000188',q:3}],
+  'IM8-FG-000228':[{s:'IM8-FG-000188',q:3},{s:'IM8-FG-000124',q:3}],
+  'IM8-FG-000229':[{s:'IM8-FG-000188',q:2}],
+  'IM8-FG-000230':[{s:'IM8-FG-000187',q:3}],
+  'IM8-FG-000231':[{s:'IM8-FG-000187',q:3},{s:'IM8-FG-000124',q:3}],
+  'IM8-FG-000232':[{s:'IM8-FG-000187',q:2}],
+  'IM8-FG-000233':[{s:'IM8-FG-000196',q:3}],
+  'IM8-FG-000234':[{s:'IM8-FG-000196',q:3},{s:'IM8-FG-000124',q:3}],
+  'IM8-FG-000235':[{s:'IM8-FG-000196',q:2}],
+  'IM8-FG-000236':[{s:'IM8-FG-000214',q:1},{s:'IM8-FG-000200',q:2}],
+  'IM8-FG-000237':[{s:'IM8-FG-000203',q:1},{s:'IM8-FG-000200',q:2},{s:'IM8-FG-000124',q:2}],
+  'IM8-FG-000238':[{s:'IM8-FG-000206',q:1},{s:'IM8-FG-000188',q:2}],
+  'IM8-FG-000239':[{s:'IM8-FG-000207',q:1},{s:'IM8-FG-000188',q:2},{s:'IM8-FG-000124',q:2}],
+  'IM8-FG-000240':[{s:'IM8-FG-000204',q:1},{s:'IM8-FG-000187',q:2}],
+  'IM8-FG-000241':[{s:'IM8-FG-000205',q:1},{s:'IM8-FG-000187',q:2},{s:'IM8-FG-000124',q:2}],
+  'IM8-FG-000242':[{s:'IM8-FG-000215',q:1},{s:'IM8-FG-000196',q:2}],
+  'IM8-FG-000243':[{s:'IM8-FG-000216',q:1},{s:'IM8-FG-000196',q:2},{s:'IM8-FG-000124',q:2}],
+  'IM8-FG-000040':[{s:'IM8-FG-000124',q:1},{s:'IM8-FG-000035',q:1}],
+  'IM8-FG-000048':[{s:'IM8-FG-000124',q:1},{s:'IM8-FG-000053',q:1}],
+  // 000161 → see Quarterly Subscription Starter kits section below
+  // 000166 → see Quarterly Subscription Refill kits section below
+  'IM8-FG-000167':[{s:'IM8-FG-000035',q:3},{s:'IM8-FG-000124',q:3}],
+  // Duo Refill bundles
+  'IM8-FG-000057':[{s:'IM8-FG-000053',q:2}],
+  'IM8-FG-000064':[{s:'IM8-FG-000035',q:2}],
+  // Quarterly Subscription Starter kits
+  'IM8-FG-000159':[{s:'IM8-FG-000010',q:1},{s:'IM8-FG-000035',q:2}],
+  'IM8-FG-000160':[{s:'IM8-FG-000030',q:1},{s:'IM8-FG-000053',q:2}],
+  'IM8-FG-000161':[{s:'IM8-FG-000011',q:1},{s:'IM8-FG-000124',q:2}],
+  'IM8-FG-000162':[{s:'IM8-FG-000012',q:1},{s:'IM8-FG-000124',q:2},{s:'IM8-FG-000035',q:2}],
+  'IM8-FG-000163':[{s:'IM8-FG-000031',q:1},{s:'IM8-FG-000053',q:2},{s:'IM8-FG-000124',q:2}],
+  // Quarterly Subscription Refill kits
+  'IM8-FG-000164':[{s:'IM8-FG-000035',q:3}],
+  'IM8-FG-000165':[{s:'IM8-FG-000053',q:3}],
+  'IM8-FG-000166':[{s:'IM8-FG-000124',q:3}],
+  'IM8-FG-000168':[{s:'IM8-FG-000053',q:3},{s:'IM8-FG-000124',q:3}],
+};
+const HIGHLIGHT_SKUS=['IM8-FG-000124','IM8-FG-000200'];
+const BUNDLE_SKUS=new Set(Object.keys(SKU_MATRIX));
+
+function short(s){return s.replace('IM8-FG-000','');}
+
+function switchTab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  if(i===5 && typeof courierRenderRules==='function') courierRenderRules();
+}
+
+let inputMode=0;
+function switchInput(i){
+  inputMode=i;
+  document.querySelectorAll('.input-tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.getElementById('inputUpload').style.display=i===0?'block':'none';
+  document.getElementById('inputPaste').style.display=i===1?'block':'none';
+  document.getElementById('calcBtn').disabled=(i===0 && !prodFileData);
+  if(i===1)document.getElementById('calcBtn').disabled=false;
+}
+
+function readFile(file,cb){
+  const r=new FileReader();
+  r.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    cb(XLSX.utils.sheet_to_json(ws,{defval:''}));
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function findCol(row,candidates){
+  const keys=Object.keys(row);
+  for(const c of candidates){
+    const f=keys.find(k=>k.toLowerCase().replace(/[\s_\-]/g,'').includes(c.toLowerCase().replace(/[\s_\-]/g,'')));
+    if(f)return f;
+  }
+  return null;
+}
+
+// ─── TAB 1: PRODUCTION CALCULATOR ─────────────────────────────────────────
+let prodFileData=null,prodInvData=null,currentView=0,prodSkuSort='none';
+
+document.getElementById('prodFile').addEventListener('change',function(){
+  if(!this.files[0])return;
+  readFile(this.files[0],rows=>{
+    prodFileData=rows;
+    document.getElementById('prodFileName').textContent=this.files[0].name;
+    document.getElementById('prodZone').classList.add('has-file');
+    document.getElementById('calcBtn').disabled=false;
+  });
+});
+
+document.getElementById('prodInvFile').addEventListener('change',function(){
+  if(!this.files[0])return;
+  readFile(this.files[0],rows=>{
+    prodInvData=rows;
+    document.getElementById('prodInvFileName').textContent=this.files[0].name;
+    document.getElementById('prodInvZone').classList.add('has-file');
+    // Re-render if results already shown
+    if(window._prodBundles) prodRenderTotals();
+  });
+});
+
+function switchView(i){
+  currentView=i;
+  document.getElementById('view0').style.display=i===0?'block':'none';
+  document.getElementById('view1').style.display=i===1?'block':'none';
+  document.getElementById('vBtn0').classList.toggle('active',i===0);
+  document.getElementById('vBtn1').classList.toggle('active',i===1);
+}
+
+function prodToggleSkuSort(){
+  prodSkuSort=prodSkuSort==='asc'?'desc':'asc';
+  const icon=document.getElementById('prodSkuSortIcon');
+  if(icon){icon.textContent=prodSkuSort==='asc'?'↑':'↓';icon.style.opacity='1';}
+  // Re-render the totals table with new sort
+  prodRenderTotals();
+}
+
+function getOrderedQty(){
+  const ordered={};
+  if(inputMode===0 && prodFileData){
+    const sRow=prodFileData[0];
+    const itemCol=findCol(sRow,['itemnumber','item number','itemnum','sku','item','row label']);
+    const qtyCol=findCol(sRow,['quantity','qty','sum']);
+    if(!itemCol||!qtyCol){alert('Cannot detect SKU/Qty columns. Found: '+Object.keys(sRow).join(', '));return null;}
+    for(const r of prodFileData){
+      const sku=String(r[itemCol]||'').trim();
+      const qty=parseInt(r[qtyCol])||0;
+      if(!sku||sku.toLowerCase().includes('total')||sku.toLowerCase().includes('grand'))continue;
+      ordered[sku]=(ordered[sku]||0)+qty;
+    }
+  } else {
+    const raw=document.getElementById('pasteArea').value.trim();
+    if(!raw){alert('Please paste data first.');return null;}
+    const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
+    let i=0;
+    while(i<lines.length){
+      const parts=lines[i].split('\t');
+      if(parts.length>=2){
+        const sku=parts[0].trim();
+        const qty=parseInt(parts[1])||0;
+        if(sku&&!sku.toLowerCase().includes('total')&&qty>0)ordered[sku]=(ordered[sku]||0)+qty;
+        i++;
+      } else {
+        const sku=lines[i].trim();
+        const qty=parseInt(lines[i+1])||0;
+        if(sku&&!sku.toLowerCase().includes('total')&&qty>0)ordered[sku]=(ordered[sku]||0)+qty;
+        i+=2;
+      }
+    }
+  }
+  return ordered;
+}
+
+function prodRenderTotals(){
+  const d=window._prodBundles;
+  if(!d)return;
+  const {bundleOrders,allBundles,allComps,subTotal,original,grandTotal}=d;
+
+  // Build on-hand map from inventory file
+  const onHand={};
+  const hasInv=prodInvData&&prodInvData.length>0;
+  if(hasInv){
+    const ir=prodInvData[0];
+    const iSku=findCol(ir,['itemnumber','item number','itemnum','sku','item']);
+    const iQty=findCol(ir,['availablephysical','available physical','available','onhand','on hand','qty','quantity','physical']);
+    if(iSku&&iQty){
+      for(const r of prodInvData){
+        const sku=String(r[iSku]||'').trim();
+        const qty=parseFloat(String(r[iQty]||'').replace(/,/g,''))||0;
+        if(sku) onHand[sku]=(onHand[sku]||0)+qty;
+      }
+    }
+  }
+
+  // If inventory loaded: for each bundle, deduct bundle stock first.
+  // Remaining bundle qty needed → used to compute how many components to produce.
+  // e.g. need 10× bundle, have 3 in stock → only produce 7 → components reduced accordingly
+  const effectiveBundleQty={};  // bundle qty after deducting finished stock
+  const netSubTotal={};         // component subtotals based on effective bundle qty
+  if(hasInv){
+    for(const [bSku,bQty] of Object.entries(bundleOrders)){
+      const bStock=Math.round(onHand[bSku]||0);
+      effectiveBundleQty[bSku]=Math.max(0, bQty-bStock);
+    }
+    // Recompute component subtotals using effective bundle quantities
+    for(const [bSku,effQty] of Object.entries(effectiveBundleQty)){
+      for(const c of (SKU_MATRIX[bSku]||[])){
+        netSubTotal[c.s]=(netSubTotal[c.s]||0)+(c.q*effQty);
+      }
+    }
+  }
+
+  // Show/hide the extra columns
+  ['prodThOnHand','prodThNet'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=hasInv?'':'none';
+  });
+
+  // Save to history
+  prodSaveHistory(bundleOrders,allBundles,allComps,subTotal,original,grandTotal,onHand,hasInv);
+
+  const tb=document.getElementById('totalsBody');
+  tb.innerHTML='';
+
+  // Sort bundles
+  let bundleList=[...allBundles];
+  if(prodSkuSort==='asc')      bundleList.sort((a,b)=>a.localeCompare(b));
+  else if(prodSkuSort==='desc') bundleList.sort((a,b)=>b.localeCompare(a));
+  else                          bundleList.sort();
+
+  for(const sku of bundleList){
+    const qty=bundleOrders[sku];
+    const isHL=HIGHLIGHT_SKUS.includes(sku);
+    const tr=document.createElement('tr');
+    const cls=isHL?'class="hl-orange"':'';
+    const bStock=hasInv?Math.round(onHand[sku]||0):null;
+    const bEff=hasInv?(effectiveBundleQty[sku]??Math.max(0,qty-(bStock||0))):null;
+    const bNetStyle=bEff>0?'color:#d97706;font-weight:700':'color:#16a34a';
+    tr.innerHTML=`<td ${cls} style="white-space:nowrap"><button onclick="prodCopySku(this,'${sku}')" title="Copy SKU" style="background:none;border:none;cursor:pointer;padding:0 5px 0 0;color:#aaa;font-size:13px;vertical-align:middle" class="prod-copy-btn">⧉</button><span style="font-family:monospace;font-size:12px">${sku}</span></td><td ${cls}><span class="badge badge-bundle">Bundle</span></td><td ${cls}><strong>${qty}</strong></td><td ${cls}>—</td><td ${cls}><strong>${qty}</strong></td>`
+      +(hasInv?`<td style="text-align:center">${bStock}</td><td style="text-align:center;${bNetStyle}">${bEff>0?bEff:'✅ 0'}</td>`:'')+'<td style="text-align:center"><input type="checkbox" class="prod-done-chk" onchange="prodMarkDone(this)" style="width:16px;height:16px;cursor:pointer"></td>';
+    tb.appendChild(tr);
+  }
+  if(bundleList.length>0&&allComps.size>0){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td colspan="${hasInv?8:6}" style="background:#f5f5f5;font-size:11px;color:#888;font-weight:600;letter-spacing:0.05em;padding:5px 10px;">COMPONENTS & STANDALONE SKUs</td>`;
+    tb.appendChild(tr);
+  }
+
+  // Sort components
+  let compList=[...allComps];
+  if(prodSkuSort==='asc')      compList.sort((a,b)=>a.localeCompare(b));
+  else if(prodSkuSort==='desc') compList.sort((a,b)=>b.localeCompare(a));
+  else                          compList.sort();
+
+  for(const c of compList){
+    const isHL=HIGHLIGHT_SKUS.includes(c);
+    const isComp=(subTotal[c]||0)>0;
+    const tr=document.createElement('tr');
+    const cls=isHL?'class="hl-orange"':'';
+    const typeLabel=isComp?'<span class="badge badge-standalone">Component</span>':'<span class="badge" style="background:#f3f4f6;color:#555">Standalone</span>';
+    const skuCell=isComp?`<span class="sku-link" onclick="showDrill('${c}')" title="Click to see bundle breakdown">${c} 🔍</span>`:c;
+    const cStock=hasInv?Math.round(onHand[c]||0):null;
+    const cGrand=grandTotal[c]||0;
+    // Effective demand = net component demand from bundles (after bundle stock deduction) + direct orders
+    // netSubTotal[c] = components needed from bundles AFTER deducting finished bundle stock
+    // If bundle has sufficient stock, netSubTotal[c] is reduced accordingly
+    const cEffDemand=hasInv?((netSubTotal[c]||0)+(original[c]||0)):cGrand;
+    const cNet=hasInv?Math.max(0,cEffDemand-(cStock||0)):null;
+    const cNetStyle=cNet>0?'color:#d97706;font-weight:700':'color:#16a34a';
+    const cNetTip=hasInv?`Effective demand: ${cEffDemand} (after bundle stock deduction)`:'';
+    tr.innerHTML=`<td ${cls} style="white-space:nowrap"><button onclick="prodCopySku(this,'${c}')" title="Copy SKU" style="background:none;border:none;cursor:pointer;padding:0 5px 0 0;color:#aaa;font-size:13px;vertical-align:middle" class="prod-copy-btn">⧉</button>${skuCell}</td><td ${cls}>${typeLabel}</td><td ${cls}>${original[c]||0}</td><td ${cls}>${subTotal[c]||0}</td><td ${cls}><strong>${cGrand}</strong></td>`
+      +(hasInv?`<td style="text-align:center">${cStock}</td><td style="text-align:center;${cNetStyle}" title="${cNetTip}">${cNet>0?cNet:'✅ 0'}</td>`:'')+'<td style="text-align:center"><input type="checkbox" class="prod-done-chk" onchange="prodMarkDone(this)" style="width:16px;height:16px;cursor:pointer"></td>';
+    tb.appendChild(tr);
+  }
+}
+
+function calculate(){
+  const ordered=getOrderedQty();
+  if(!ordered||Object.keys(ordered).length===0){alert('No data found.');return;}
+  const bundleOrders={},directOrders={};
+  for(const [sku,qty] of Object.entries(ordered)){
+    if(BUNDLE_SKUS.has(sku))bundleOrders[sku]=qty;
+    else directOrders[sku]=qty;
+  }
+  const subTotal={};
+  for(const [sku,qty] of Object.entries(bundleOrders)){
+    for(const c of SKU_MATRIX[sku]){subTotal[c.s]=(subTotal[c.s]||0)+(c.q*qty);}
+  }
+  const original={};
+  for(const [sku,qty] of Object.entries(directOrders)){original[sku]=(original[sku]||0)+qty;}
+  const allComps=new Set([...Object.keys(subTotal),...Object.keys(original)]);
+  const allBundles=new Set(Object.keys(bundleOrders));
+  const grandTotal={};
+  for(const c of allComps){grandTotal[c]=(subTotal[c]||0)+(original[c]||0);}
+  const drillData={};
+  for(const c of allComps){
+    drillData[c]=[];
+    for(const [bSku,bQty] of Object.entries(bundleOrders)){
+      const recipe=SKU_MATRIX[bSku]||[];
+      const comp=recipe.find(r=>r.s===c);
+      if(comp&&comp.q>0){drillData[c].push({bundleSku:bSku,bundleQty:bQty,ratio:comp.q,contribution:comp.q*bQty});}
+    }
+  }
+  // Store for re-render on sort
+  window._prodBundles={bundleOrders,allBundles,allComps,subTotal,original,grandTotal};
+  prodRenderTotals();
+  const compCols=[...allComps].sort();
+  const bundleRows=Object.keys(bundleOrders).sort();
+  let html='<thead><tr><th>Bundle SKU</th><th>QTY</th>';
+  for(const c of compCols){const isHL=HIGHLIGHT_SKUS.includes(c);html+=`<th${isHL?' class="hl-orange-header"':''}>${short(c)}</th>`;}
+  html+='</tr></thead><tbody>';
+  for(const sku of bundleRows){
+    const qty=bundleOrders[sku];
+    const recipe=SKU_MATRIX[sku]||[];
+    html+=`<tr><td>${sku}</td><td>${qty}</td>`;
+    for(const c of compCols){const comp=recipe.find(r=>r.s===c);const val=comp?comp.q*qty:0;const isHL=HIGHLIGHT_SKUS.includes(c);html+=`<td${isHL?' class="hl-orange"':''}>${val||''}</td>`;}
+    html+='</tr>';
+  }
+  html+='<tr class="row-subtotal"><td colspan="2">SUB TOTAL</td>';
+  for(const c of compCols){const isHL=HIGHLIGHT_SKUS.includes(c);html+=`<td${isHL?' class="hl-orange"':''}>${subTotal[c]||0}</td>`;}
+  html+='</tr><tr class="row-original"><td colspan="2">ORIGINAL</td>';
+  for(const c of compCols){const isHL=HIGHLIGHT_SKUS.includes(c);html+=`<td${isHL?' class="hl-orange"':''}>${original[c]||''}</td>`;}
+  html+='</tr><tr class="row-total"><td colspan="2">TOTAL</td>';
+  for(const c of compCols){const isHL=HIGHLIGHT_SKUS.includes(c);html+=`<td${isHL?' class="hl-orange"':''}><strong>${grandTotal[c]||0}</strong></td>`;}
+  html+='</tr></tbody>';
+  window._drillData=drillData;window._grandTotal=grandTotal;window._subTotal=subTotal;window._original=original;
+  document.getElementById('matrixTable').innerHTML=html;
+  document.getElementById('prodResults').style.display='block';
+  switchView(currentView);
+}
+
+function showDrill(sku){
+  const data=window._drillData&&window._drillData[sku];if(!data)return;
+  document.getElementById('drillTitle').textContent='Bundle breakdown for '+sku;
+  document.getElementById('drillSub').textContent='How much of the "From bundles" quantity comes from each bundle:';
+  const tbody=document.getElementById('drillBody');tbody.innerHTML='';
+  let bundleTotal=0;
+  for(const d of data){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${d.bundleSku}</td><td>${d.bundleQty} ordered</td><td>× ${d.ratio} per bundle</td><td><strong>${d.contribution}</strong></td>`;
+    tbody.appendChild(tr);bundleTotal+=d.contribution;
+  }
+  const orig=(window._original&&window._original[sku])||0;
+  const grand=(window._grandTotal&&window._grandTotal[sku])||0;
+  document.getElementById('drillTotal').innerHTML=`From bundles subtotal: <strong>${bundleTotal}</strong> &nbsp;+&nbsp; Direct orders: <strong>${orig}</strong> &nbsp;=&nbsp; Grand total: <strong>${grand}</strong>`;
+  document.getElementById('drillOverlay').classList.add('show');
+}
+function closeDrill(){document.getElementById('drillOverlay').classList.remove('show');}
+
+// ─── TAB 2: FULFILLMENT GENERATOR ─────────────────────────────────────────
+let salesData=null,invData=null,outputRows=null,blankSkus=[];
+
+function ffLog(msg,type=''){
+  const el=document.getElementById('ffLog');el.style.display='block';
+  const d=document.createElement('div');if(type)d.className='log-'+type;d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+function clearFFLog(){const el=document.getElementById('ffLog');el.innerHTML='';el.style.display='none';}
+function checkReady(){document.getElementById('generateBtn').disabled=!(salesData&&invData);}
+
+document.getElementById('salesFile').addEventListener('change',function(){
+  if(!this.files[0])return;
+  readFile(this.files[0],rows=>{salesData=rows;document.getElementById('salesName').textContent=this.files[0].name;document.getElementById('salesZone').classList.add('has-file');checkReady();});
+});
+document.getElementById('invFile').addEventListener('change',function(){
+  if(!this.files[0])return;
+  readFile(this.files[0],rows=>{invData=rows;document.getElementById('invName').textContent=this.files[0].name;document.getElementById('invZone').classList.add('has-file');checkReady();});
+});
+
+function generate(){
+  clearFFLog();
+  document.getElementById('ffStats').style.display='none';
+  document.getElementById('downloadBtns').style.display='none';
+  document.getElementById('downloadBtns').innerHTML='';
+  document.getElementById('hint').style.display='none';
+  outputRows=null;blankSkus=[];outputFiles=[];
+  const splitCount=Math.max(1,parseInt(document.getElementById('splitCount').value)||1);
+  const sRow=salesData[0];
+  const orderCol=findCol(sRow,['salesorder','sales order','order']);
+  const itemCol=findCol(sRow,['itemnumber','item number','itemnum','sku','item']);
+  const trackCol=findCol(sRow,['tracking','awb','trackingno']);
+  const qtyCol=findCol(sRow,['quantity','qty']);
+  if(!orderCol||!itemCol||!trackCol||!qtyCol){ffLog('Cannot detect columns. Found: '+Object.keys(sRow).join(', '));return;}
+  const iRow=invData[0];
+  const iItem=findCol(iRow,['itemnumber','item number','itemnum','sku','item']);
+  const iBatch=findCol(iRow,['batchnumber','batch number','batch']);
+  const iQty=findCol(iRow,['availablephysical','available physical','available','qty','quantity','physical']);
+  if(!iItem||!iBatch||!iQty){ffLog('Cannot detect inventory columns. Found: '+Object.keys(iRow).join(', '));return;}
+  const invMapMaster={};
+  for(const r of invData){
+    const sku=String(r[iItem]||'').trim();const batch=String(r[iBatch]||'').trim();const qty=parseFloat(r[iQty])||0;
+    if(!sku)continue;if(!invMapMaster[sku])invMapMaster[sku]=[];invMapMaster[sku].push({batch,qty});
+  }
+  for(const s in invMapMaster)invMapMaster[s].sort((a,b)=>b.qty-a.qty);
+  const salesRows=[];const orderGroupOrder=[];const orderMap={};
+  for(const r of salesData){
+    const order=String(r[orderCol]||'').trim();const sku=String(r[itemCol]||'').trim();const tracking=String(r[trackCol]||'').trim();const qty=parseInt(r[qtyCol])||1;
+    if(!order&&!sku)continue;
+    if(!orderMap[order]){orderMap[order]=[];orderGroupOrder.push(order);}
+    for(let i=0;i<qty;i++){const row={order,sku,tracking};orderMap[order].push(row);salesRows.push(row);}
+  }
+  const fileOrderKeys=Array.from({length:splitCount},()=>[]);const fileSizes=Array(splitCount).fill(0);
+  for(const ord of orderGroupOrder){let minIdx=0;for(let i=1;i<splitCount;i++){if(fileSizes[i]<fileSizes[minIdx])minIdx=i;}fileOrderKeys[minIdx].push(ord);fileSizes[minIdx]+=orderMap[ord].length;}
+  const today=new Date();
+  const mm=String(today.getMonth()+1).padStart(2,'0');const dd=String(today.getDate()).padStart(2,'0');const yyyy=today.getFullYear();const todayStr=mm+'/'+dd+'/'+yyyy;
+  const allBlankSkus=new Set();let totalMatched=0,totalBlank=0,totalRows=0;const allOrderSet=new Set();
+  const invMap={};for(const s in invMapMaster){invMap[s]=invMapMaster[s].map(b=>({...b}));}
+  for(let f=0;f<splitCount;f++){
+    const ordersInFile=new Set(fileOrderKeys[f]);const fileRows=[];
+    for(const ord of fileOrderKeys[f]){for(const row of orderMap[ord])fileRows.push(row);}
+    const demand={};for(const r of fileRows){demand[r.sku]=(demand[r.sku]||0)+1;}
+    const plan={};
+    for(const sku in demand){
+      const need=demand[sku];const batches=invMap[sku];
+      if(!batches||!batches.length){plan[sku]=[];allBlankSkus.add(sku);continue;}
+      const avail=batches.reduce((s,b)=>s+b.qty,0);
+      if(avail<need){plan[sku]=[];allBlankSkus.add(sku);continue;}
+      const single=batches.find(b=>b.qty>=need);
+      if(single){plan[sku]=[{batch:single.batch,units:need}];}
+      else{let rem=need;const p=[];for(const b of batches){if(rem<=0)break;const u=Math.min(b.qty,rem);p.push({batch:b.batch,units:u});rem-=u;}plan[sku]=p;}
+    }
+    for(const sku in plan){for(const seg of plan[sku]){const b=invMap[sku]&&invMap[sku].find(x=>x.batch===seg.batch);if(b)b.qty=Math.max(0,b.qty-seg.units);}}
+    for(const s in invMap)invMap[s].sort((a,b)=>b.qty-a.qty);
+    const makeBatchGetter=(planRef)=>{
+      const cursor={};for(const s in planRef)cursor[s]={idx:0,used:0};
+      return (sku)=>{const p=planRef[sku];if(!p||!p.length)return '';const c=cursor[sku];if(c.idx>=p.length)return '';const seg=p[c.idx];c.used++;if(c.used>=seg.units){c.idx++;c.used=0;}return seg.batch;};
+    };
+    const getBatch=makeBatchGetter(plan);
+    const rows=[];let matched=0,blank=0;
+    for(const r of fileRows){
+      allOrderSet.add(r.order);const batch=getBatch(r.sku);
+      if(batch)matched++;else{blank++;allBlankSkus.add(r.sku);}
+      rows.push({'Shipped date':todayStr,'Order ID':r.order,'AWB':r.tracking,'SKU Number':r.sku,'Warehouse location':'Prenetics~OPS-WH01~Primary','Batch Number':batch});
+    }
+    totalMatched+=matched;totalBlank+=blank;totalRows+=rows.length;outputFiles.push(rows);
+    ffLog(`File ${f+1}: ${rows.length} rows, ${ordersInFile.size} orders, ${blank} blank`+(blank>0?' ⚠️':''));
+  }
+  blankSkus=[...allBlankSkus];outputRows=outputFiles;
+  document.getElementById('s-rows').textContent=totalRows;document.getElementById('s-orders').textContent=allOrderSet.size;
+  document.getElementById('s-ok').textContent=totalMatched;document.getElementById('s-warn').textContent=totalBlank;
+  document.getElementById('ffStats').style.display='grid';
+  if(blankSkus.length>0){ffLog('--- Batch blank SKUs ('+blankSkus.length+') ---','warn');blankSkus.forEach(s=>ffLog(s,'warn'));}
+  renderDownloadButtons();
+}
+
+let outputFiles=[];
+function renderDownloadButtons(){
+  const today=new Date();const dd=String(today.getDate()).padStart(2,'0');const mm=String(today.getMonth()+1).padStart(2,'0');const yyyy=today.getFullYear();const dateStr=dd+mm+yyyy;
+  fileBlobData=outputFiles.map((fileRows,idx)=>{
+    const mainRows=fileRows.map(r=>({...r}));
+    mainRows.push({'Shipped date':'','Order ID':'','AWB':'','SKU Number':'IM8-SER-000003','Warehouse location':'Prenetics~~','Batch Number':''});
+    const ws=XLSX.utils.json_to_sheet(mainRows);
+    const range=XLSX.utils.decode_range(ws['!ref']);
+    for(let R=range.s.r;R<=range.e.r;R++){for(let C=range.s.c;C<=range.e.c;C++){const ref=XLSX.utils.encode_cell({r:R,c:C});if(!ws[ref])continue;if(!ws[ref].s)ws[ref].s={};ws[ref].s.font={name:'Calibri',sz:11};}}
+    const cols=['Shipped date','Order ID','AWB','SKU Number','Warehouse location','Batch Number'];
+    ws['!cols']=cols.map(col=>({wch:Math.max(col.length,...mainRows.map(r=>String(r[col]||'').length))+4}));
+    ws['!autofilter']={ref:'A1:F1'};
+    const ws2=XLSX.utils.json_to_sheet([{'Order ID':'','SKU Number':'','Serial number':''}]);ws2['!cols']=[{wch:20},{wch:20},{wch:20}];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'order');XLSX.utils.book_append_sheet(wb,ws2,'serial number');
+    const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});const blob=new Blob([wbout],{type:'application/octet-stream'});
+    const suffix=outputFiles.length>1?`_part${idx+1}`:'';const name=`THK_SalesShopifyFullfilemntExcel_${dateStr}${suffix}.xlsx`;
+    return {blob,name,rows:fileRows.length};
+  });
+  if(blankSkus&&blankSkus.length>0){document.getElementById('modalList').innerHTML=blankSkus.map(s=>`<li>${s}</li>`).join('');document.getElementById('modalOverlay').classList.add('show');}
+  else{showDownloadButtons();}
+}
+
+function showDownloadButtons(){
+  const container=document.getElementById('downloadBtns');container.innerHTML='';
+  fileBlobData.forEach(({blob,name,rows},idx)=>{
+    const btn=document.createElement('button');btn.className='btn-green';btn.style.marginBottom='8px';
+    btn.textContent=`⬇️ Download File ${fileBlobData.length>1?idx+1+' ':''} — ${rows} rows (${name})`;
+    btn.onclick=()=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);};
+    container.appendChild(btn);
+  });
+  container.style.display='block';document.getElementById('hint').style.display='block';document.getElementById('hint').textContent='Files save to your Downloads folder';
+}
+
+let fileBlobData=[];
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function closeModalAndDownload(){closeModal();showDownloadButtons();}
+
+// ─── TAB 3: GPS GENERATOR ──────────────────────────────────────────────────
+const CATALOGUE = {
+  "IM8-FG-000149":{desc:'Essentials - Travel Box Set (7ct), Açaí - STD',uw:0.1,uv:3.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000187":{desc:'Essentials - Travel Box Set (30ct), Orange Lemon - STD',uw:0.5,uv:15.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000188":{desc:'Essentials - Travel Box Set (30ct), Mango Passionfruit - STD',uw:0.5,uv:15.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000196":{desc:'Essentials - Travel Box Set (30ct), Variety - STD',uw:0.5,uv:15.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000200":{desc:'Essentials - Travel Box Set (30ct), Acai - STD',uw:0.5,uv:15.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000203":{desc:'Beckham Stack Starter - Single-Serve Sachets - Acai',uw:2.1,uv:30.0,l:41.0,w:24.0,h:14.0},
+  "IM8-FG-000204":{desc:'Essentials Starter - Single-Serve Sachets - Lemon Orange',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000206":{desc:'Essentials Starter - Sachets - Mango Passion Fruit',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000207":{desc:'Beckham Stack Starter - Single-Serve Sachets - Mango',uw:2.1,uv:30.0,l:41.0,w:24.0,h:14.0},
+  "IM8-FG-000214":{desc:'Essentials Starter - Single-Serve Sachets - Acai',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000215":{desc:'Essentials Starter - Single-Serve Sachets - Variety',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000216":{desc:'Beckham Stack Starter - Single-Serve Sachets - Variety',uw:2.1,uv:30.0,l:41.0,w:24.0,h:14.0},
+  "IM8-FG-000219":{desc:'Refill Beckham Stack Starter - Single-Serve Sachets - Acai',uw:0.8,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000220":{desc:'Refill Beckham Stack Starter - Sachets - Lemon Orange',uw:0.8,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000221":{desc:'Refill Beckham Stack Starter - Single-Serve Sachets - Mango',uw:0.8,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000222":{desc:'Refill Beckham Stack Starter - Single-Serve Sachets -Variety',uw:0.8,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000225":{desc:'Refill - Quarterly Subscription - Beckham Stack V2 - Acai',uw:2.4,uv:90.0,l:27.0,w:21.0,h:20.0},
+  "IM8-FG-000226":{desc:'Refill - Duo Subscription - Essentials V2 - Acai',uw:1.0,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000227":{desc:'Refill - Quarterly Subscription - Essentials V2 - Mango',uw:1.5,uv:45.0,l:35.0,w:15.0,h:16.0},
+  "IM8-FG-000229":{desc:'Refill - Duo Subscription - Essentials V2 - Mango',uw:1.0,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000231":{desc:'Refill - Quarterly Subscription - Beckham Stack V2 - Lemon',uw:2.4,uv:90.0,l:27.0,w:21.0,h:20.0},
+  "IM8-FG-000233":{desc:'Refill - Quarterly Subscription - Essentials V2 - Variety',uw:1.5,uv:45.0,l:35.0,w:15.0,h:16.0},
+  "IM8-FG-000234":{desc:'Refill - Quarterly Subscription - Beckham Stack V2 - Variety',uw:2.4,uv:90.0,l:27.0,w:21.0,h:20.0},
+  "IM8-FG-000235":{desc:'Refill - Duo Subscription - Essentials V2 - Variety',uw:1.0,uv:30.0,l:30.0,w:15.0,h:14.0},
+  "IM8-FG-000236":{desc:'Quarterly Subscription - Essentials Starter V2 - Acai',uw:2.5,uv:60.0,l:41.0,w:28.0,h:20.0},
+  "IM8-FG-000237":{desc:'Quarterly  - Beckham Stack Starter V2- Acai',uw:3.7,uv:90.0,l:48.0,w:38.0,h:16.0},
+  "IM8-FG-000238":{desc:'Quarterly - Essentials Starter V2 - Mango',uw:2.5,uv:60.0,l:41.0,w:28.0,h:20.0},
+  "IM8-FG-000239":{desc:'Quarterly Subscription - Beckham Stack Starter V2- Mango',uw:3.7,uv:90.0,l:48.0,w:38.0,h:16.0},
+  "IM8-FG-000240":{desc:'Quarterly - Essentials Starter V2 - Lemon',uw:2.5,uv:60.0,l:41.0,w:28.0,h:20.0},
+  "IM8-FG-000241":{desc:'Quarterly Subscription - Beckham Stack Starter V2- Lemon',uw:3.7,uv:90.0,l:48.0,w:38.0,h:16.0},
+  "IM8-FG-000242":{desc:'Quarterly - Essentials Starter V2 - Variety',uw:2.5,uv:60.0,l:41.0,w:28.0,h:20.0},
+  "IM8-FG-000243":{desc:'Quarterly - Beckham Stack Starter V2- Variety',uw:3.7,uv:90.0,l:48.0,w:38.0,h:16.0},
+  "IM8-FG-000143":{desc:'Frother - SS Type C - Silver',uw:0.23,uv:3.0,l:null,w:null,h:null},
+  "IM8-FG-000035":{desc:'Essential Pouch, supplement',uw:0.37,uv:14.5,l:24.0,w:19.0,h:11.0},
+  "IM8-FG-000040":{desc:'Refill of Longevity & Essential Pouch',uw:0.67,uv:15.0,l:24.0,w:19.0,h:11.0},
+  "IM8-FG-000048":{desc:'Refill of Longevity & Essential Travel Stick',uw:0.76,uv:15.0,l:26.0,w:21.0,h:14.0},
+  "IM8-FG-000053":{desc:'IM8 Refill Essential Travel Sachets (30)',uw:0.46,uv:15.3,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000064":{desc:'Essential Pouch, supplement',uw:0.74,uv:30.0,l:null,w:null,h:null},
+  "IM8-FG-000124":{desc:'IM8 Refill Longevity Travel Sachets (30)',uw:0.3,uv:15.6,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000145":{desc:'Hat',uw:0.2,uv:5.0,l:20.0,w:24.0,h:10.0},
+  "IM8-FG-000146":{desc:'IM8 Signature Red Cup, SS 304, 19.5 fl.oz',uw:0.4,uv:2.0,l:8.0,w:23.0,h:8.0},
+  "IM8-FG-000149":{desc:'Essentials - Travel Box Set (7ct), Açaí - STD',uw:0.1,uv:3.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000161":{desc:'IM8 Supplement full kit with tritan bottle, refill Longevity Travel Sachets',uw:1.75,uv:60.0,l:39.0,w:26.0,h:16.0},
+  "IM8-FG-000164":{desc:'Refill Essential Pouch',uw:1.11,uv:45.0,l:26.0,w:21.0,h:14.0},
+  "IM8-FG-000166":{desc:'Refill Longevity Travel Sachets (30)',uw:0.9,uv:45.0,l:24.0,w:19.0,h:11.0},
+  "IM8-FG-000167":{desc:'Refill of Longevity & Essential Pouch',uw:2.01,uv:90.0,l:30.0,w:15.0,h:13.0},
+  "IM8-FG-000011":{desc:'IM8 Supplement full kit with tritan bottle',uw:1.15,uv:30.0,l:27.0,w:24.4,h:11.5},
+  "IM8-FG-000198":{desc:'Essentials - Travel Box Set (7ct), Variety - STD',uw:0.1,uv:3.0,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000224":{desc:'Refill - Quarterly Subscription - Essentials V2 - Acai',uw:1.5,uv:45.0,l:35.0,w:15.0,h:16.0},
+  // Duo Refill SKUs (qty=2 versions of base components)
+  "IM8-FG-000057":{desc:'Refill Essential Travel (30) ×2',uw:0.92,uv:30.6,l:17.0,w:15.0,h:14.0},
+  "IM8-FG-000064":{desc:'Essential Pouch, supplement ×2',uw:0.74,uv:29.0,l:24.0,w:19.0,h:11.0},
+  // Quarterly Subscription Starter kits
+  "IM8-FG-000159":{desc:'Quarterly Subscription - Essentials Starter - Forever Jar',uw:2.12,uv:60.0,l:null,w:null,h:null},
+  "IM8-FG-000160":{desc:'Quarterly Subscription - Essentials Starter - Sachets',uw:2.38,uv:60.0,l:null,w:null,h:null},
+  "IM8-FG-000161":{desc:'Quarterly Subscription - Longevity Starter',uw:1.75,uv:60.0,l:39.0,w:26.0,h:16.0},
+  "IM8-FG-000162":{desc:'Quarterly Subscription - Beckham Stack Starter - Forever Jar',uw:3.44,uv:90.0,l:null,w:null,h:null},
+  "IM8-FG-000163":{desc:'Quarterly Subscription - Beckham Stack Starter - Sachets',uw:3.62,uv:90.0,l:null,w:null,h:null},
+  // Quarterly Subscription Refill kits
+  "IM8-FG-000164":{desc:'Quarterly Subscription - Essentials Refill - Forever Jar',uw:1.11,uv:45.0,l:26.0,w:21.0,h:14.0},
+  "IM8-FG-000165":{desc:'Quarterly Subscription - Essentials Refill - Sachets',uw:1.38,uv:46.0,l:null,w:null,h:null},
+  "IM8-FG-000166":{desc:'Quarterly Subscription - Longevity Refill',uw:0.9,uv:45.0,l:24.0,w:19.0,h:11.0},
+  "IM8-FG-000167":{desc:'Quarterly Subscription - Beckham Stack Refill - Forever Jar',uw:2.01,uv:45.0,l:30.0,w:15.0,h:13.0},
+  "IM8-FG-000168":{desc:'Quarterly Subscription - Beckham Stack Refill - Sachets',uw:2.28,uv:45.0,l:null,w:null,h:null},
+  // New starter SKUs (OTP variants — physical product same as base)
+  "IM8-FG-000203":{desc:'Beckham Stack Starter - Single-Serve Sachets - Acai',uw:2.1,uv:30.0,l:41.0,w:24.0,h:14.0},
+  "IM8-FG-000204":{desc:'Essentials Starter - Single-Serve Sachets - Lemon Orange',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000205":{desc:'Beckham Stack Starter - Single-Serve Sachets - Lemon Orange',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000206":{desc:'Essentials Starter - Sachets - Mango Passion Fruit',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0},
+  "IM8-FG-000207":{desc:'Beckham Stack Starter - Single-Serve Sachets - Mango',uw:2.1,uv:30.0,l:41.0,w:24.0,h:14.0},
+  "IM8-FG-000208":{desc:'OTP Essentials Starter - Single-Serve Sachets - Acai',uw:1.5,uv:30.0,l:29.0,w:24.0,h:14.0}
+};
+
+// OTP pairs — same physical product, different SKU listings (from New_flavour.xlsx sheet 2.0)
+// Both OTP variants point to the same canonical/primary SKU so they are merged in forecasts
+const OTP_MAP={
+  // Beckham Acai
+  'IM8-FG-000209':'IM8-FG-000203','IM8-FG-000203':'IM8-FG-000203',
+  // Essentials Lemon Orange
+  'IM8-FG-000210':'IM8-FG-000204','IM8-FG-000204':'IM8-FG-000204',
+  // Beckham Lemon Orange
+  'IM8-FG-000211':'IM8-FG-000205','IM8-FG-000205':'IM8-FG-000205',
+  // Essentials Mango
+  'IM8-FG-000212':'IM8-FG-000206','IM8-FG-000206':'IM8-FG-000206',
+  // Beckham Mango
+  'IM8-FG-000213':'IM8-FG-000207','IM8-FG-000207':'IM8-FG-000207',
+  // Essentials Acai starter
+  'IM8-FG-000208':'IM8-FG-000214','IM8-FG-000214':'IM8-FG-000214',
+  // Essentials Variety starter
+  'IM8-FG-000217':'IM8-FG-000215','IM8-FG-000215':'IM8-FG-000215',
+  // Beckham Variety starter
+  'IM8-FG-000218':'IM8-FG-000216','IM8-FG-000216':'IM8-FG-000216',
+  // EU/CA subscription variants → same physical product as 000198
+  'IM8-FG-000247':'IM8-FG-000198','IM8-FG-000248':'IM8-FG-000198',
+  'IM8-FG-000249':'IM8-FG-000198','IM8-FG-000198':'IM8-FG-000198',
+  // Duo Refill and Quarterly kits are bundles (in SKU_MATRIX), not OTP aliases
+};
+// Helper: resolve any SKU to its canonical primary SKU
+function canonicalSku(sku){ return OTP_MAP[sku]||sku; }
+
+const COUNTRY_MAP={'MYS':'MY','PHL':'PH','SGP':'SG','AUS':'AU','USA':'US','GBR':'GB'};
+const SHIPWAY_MAP={'MY':'IM8Standard-HK','PH':'IM8Standard-HK'};
+const FROTHER_SKU='IM8-FG-000143';
+
+let gpsFileData=null;
+let gpsOutputBlob=null;
+let gpsOutputName='';
+
+document.getElementById('gpsFile').addEventListener('change',function(){
+  if(!this.files[0])return;
+  readFile(this.files[0],rows=>{
+    gpsFileData=rows;
+    document.getElementById('gpsFileName').textContent=this.files[0].name;
+    document.getElementById('gpsZone').classList.add('has-file');
+    document.getElementById('gpsBtn').disabled=false;
+  });
+});
+
+function gpsLog(msg,type=''){
+  const el=document.getElementById('gpsLog');
+  const d=document.createElement('div');if(type)d.className='log-'+type;d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+
+function generateGPS(){
+  document.getElementById('gpsResults').style.display='block';
+  document.getElementById('gpsLog').innerHTML='';
+  document.getElementById('gpsDownloadBtn').innerHTML='';
+  document.getElementById('gpsPreviewTable').innerHTML='';
+
+  const rows=gpsFileData;
+  if(!rows||rows.length===0){gpsLog('No data found.');return;}
+
+  const sRow=rows[0];
+  const orderCol=findCol(sRow,['ordernumber','order number','order']);
+  const itemCol=findCol(sRow,['itemnumber','item number','itemnum','sku']);
+  const nameCol=findCol(sRow,['shippingname','shipping name','name']);
+  const addr1Col=findCol(sRow,['shippingaddress1','shipping address1','address1']);
+  const addr2Col=findCol(sRow,['shippingaddress2','shipping address2','address2']);
+  const cityCol=findCol(sRow,['shippingcity','shipping city','city']);
+  const zipCol=findCol(sRow,['shippingzip','shipping zip','zip','postcode']);
+  const phoneCol=findCol(sRow,['shippingphone','shipping phone','phone']);
+  const emailCol=findCol(sRow,['email']);
+  const countryCol=findCol(sRow,['shippingcountry','shipping country','country/region','countryregion']);
+  const qtyCol=findCol(sRow,['quantity','qty']);
+  const productCol=findCol(sRow,['productname','product name','product']);
+
+  if(!orderCol||!itemCol){gpsLog('❌ Cannot detect Order/SKU columns.');return;}
+
+  // Group rows by order number (preserve insertion order)
+  const orderKeys=[];
+  const orderMap={};
+  for(const r of rows){
+    const ord=String(r[orderCol]||'').trim();
+    if(!ord)continue;
+    if(!orderMap[ord]){orderMap[ord]=[];orderKeys.push(ord);}
+    orderMap[ord].push(r);
+  }
+
+  const outputRows=[];
+  let autoCount=0,manualCount=0,unknownSkus=new Set();
+
+  for(const orderId of orderKeys){
+    const group=orderMap[orderId];
+    const first=group[0];
+
+    // Country code
+    const rawCountry=String(first[countryCol]||'').trim();
+    const countryCode=COUNTRY_MAP[rawCountry]||rawCountry;
+
+    // Address
+    const addr1=String(first[addr1Col]||'').trim();
+    const addr2=String(first[addr2Col]||'').trim();
+
+    // Build SKU list
+    const skuList=[];
+    for(const r of group){
+      const sku=String(r[itemCol]||'').trim();
+      const qty=parseInt(r[qtyCol])||1;
+      const cat=CATALOGUE[sku];
+      if(!cat)unknownSkus.add(sku);
+      const prodName=String(r[productCol]||'').trim();
+      skuList.push({
+        sku,qty,
+        desc:cat?cat.desc:prodName,
+        uw:cat?cat.uw:null,
+        uv:cat?cat.uv:null,
+        l:cat?cat.l:null,
+        w:cat?cat.w:null,
+        h:cat?cat.h:null
+      });
+    }
+
+    // Total weight
+    let totalWeight=0,weightOk=true;
+    for(const s of skuList){
+      if(s.uw!=null)totalWeight+=s.qty*s.uw;
+      else weightOk=false;
+    }
+
+    // Dimension logic
+    let dimL='',dimW='',dimH='',dimsAuto=false;
+    const skuCodes=skuList.map(s=>s.sku);
+    const nonFrother=skuList.filter(s=>s.sku!==FROTHER_SKU);
+
+    if(skuList.length===1){
+      const s=skuList[0];
+      if(s.l!=null){dimL=s.l;dimW=s.w;dimH=s.h;dimsAuto=true;}
+    } else if(skuList.length===2 && skuCodes.includes(FROTHER_SKU) && nonFrother.length===1){
+      // FG-143 combo: use the other SKU's dims
+      const ref=nonFrother[0];
+      if(ref.l!=null){dimL=ref.l;dimW=ref.w;dimH=ref.h;dimsAuto=true;}
+    }
+    // else: leave blank (multi-SKU, manual fill)
+
+    if(dimsAuto)autoCount++;else manualCount++;
+
+    const row={
+      '*Warehouse Code':'HKG',
+      '*Country code':countryCode,
+      '*Shipway Code':SHIPWAY_MAP[countryCode]||'IM8Standard-HK',
+      'Reference ID1':orderId,
+      'Sign in service':'',
+      '*Is it FBA':false,
+      'Fba Code':'',
+      'receiver Name':String(first[nameCol]||'').trim(),
+      'receiver Company Name':'',
+      'receiver ZIP':String(first[zipCol]||'').trim(),
+      'receiver Address 1':addr1,
+      'receiver Address 2':addr2!=='nan'?addr2:'',
+      'receiver City':String(first[cityCol]||'').trim(),
+      'receiver State':'',
+      'receiver Phone':String(first[phoneCol]||'').trim(),
+      'receiver Email':String(first[emailCol]||'').trim(),
+      'Sender Name':'IM8 Limited',
+      'Sender Company Name':'',
+      'Sender Address 1':'Flat 14D, Hang Cheong Factory Building',
+      'Sender Address 2':'1 Wing Ming Street',
+      'Sender City':'Cheung Sha Wan',
+      'Sender Consignee ID':'',
+      'Sender State':'',
+      'Sender Country Code':'HK',
+      'Sender ZIP':'',
+      'Sender Phone':'',
+      'Sender Email':'',
+      'Sender Tax ID':'',
+      'Customs Currency':'',
+      'Dimension Unit':'',
+      'Manifest weight unit':'',
+      '*Number of boxes':1,
+      '*Weight':weightOk?Math.round(totalWeight*10000)/10000:'',
+      '*Length':dimL,
+      '*Width':dimW,
+      '*Height':dimH,
+      'Remark':'',
+      // SKU slot 1
+      'Description Local.1':'','Description Dest.1':'','Quantity.1':'','Unit Value.1':'','Unit Weight.1':'','HS Code.1':'','Brand 1':'','Product SKU. 1':'','Model 1':'','Material Chinese 1':'','Material English 1':'','Usage in Chinese 1':'','Usage English 1':'','Sale Url.1':'',
+      // SKU slot 2
+      'Description Local.2':'','Description Dest.2':'','Quantity.2':'','Unit Value.2':'','Unit Weight.2':'','HS Code.2':'','Brand. 2':'','Product SKU. 2':'','Model 2':'','Material Chinese. 2':'','Material English. 2':'','Usage in Chinese 2':'','Usage English. 2':'','Sale Url.2':'',
+      // SKU slot 3
+      'Description Local.3':'','Description Dest.3':'','Quantity.3':'','Unit Value.3':'','Unit Weight.3':'','HS Code.3':'','Brand 3':'','Product SKU. 3':'','Model 3':'','Material Chinese. 3':'','Material English. 3':'','Usage in Chinese. 3':'','Usage in English. 3':'','Sale Url.3':'',
+      // SKU slot 4
+      'Description Local.4':'','Description Dest.4':'','Quantity.4':'','Unit Value.4':'','Unit Weight.4':'','HS Code.4':'','Brand 4':'','Product SKU. 4':'','Model 4':'','Material Chinese. 4':'','Material English. 4':'','Usage in Chinese. 4':'','Usage English. 4':'','Sale Url.4':'',
+      // SKU slot 5
+      'Description Local.5':'','Description Dest.5':'','Quantity.5':'','Unit Value.5':'','Unit Weight.5':'','HS Code.5':'','Brand 5':'','Product SKU. 5':'','Model 5':'','Material Chinese. 5':'','Material English. 5':'','Usage in Chinese. 5':'','Usage English. 5':'','Sale Url.5':''
+    };
+
+    // Fill SKU slots — exact column names from DEMO file (each slot has unique naming quirks)
+    const SKU_COLS=[
+      {dl:'Description Local.1',dd:'Description Dest.1',qty:'Quantity.1',uv:'Unit Value.1',uw:'Unit Weight.1',hs:'HS Code.1',br:'Brand 1',sku:'Product SKU. 1',mo:'Model 1',mc:'Material Chinese 1',me:'Material English 1',uc:'Usage in Chinese 1',ue:'Usage English 1',url:'Sale Url.1'},
+      {dl:'Description Local.2',dd:'Description Dest.2',qty:'Quantity.2',uv:'Unit Value.2',uw:'Unit Weight.2',hs:'HS Code.2',br:'Brand. 2',sku:'Product SKU. 2',mo:'Model 2',mc:'Material Chinese. 2',me:'Material English. 2',uc:'Usage in Chinese 2',ue:'Usage English. 2',url:'Sale Url.2'},
+      {dl:'Description Local.3',dd:'Description Dest.3',qty:'Quantity.3',uv:'Unit Value.3',uw:'Unit Weight.3',hs:'HS Code.3',br:'Brand 3',sku:'Product SKU. 3',mo:'Model 3',mc:'Material Chinese. 3',me:'Material English. 3',uc:'Usage in Chinese. 3',ue:'Usage in English. 3',url:'Sale Url.3'},
+      {dl:'Description Local.4',dd:'Description Dest.4',qty:'Quantity.4',uv:'Unit Value.4',uw:'Unit Weight.4',hs:'HS Code.4',br:'Brand 4',sku:'Product SKU. 4',mo:'Model 4',mc:'Material Chinese. 4',me:'Material English. 4',uc:'Usage in Chinese. 4',ue:'Usage English. 4',url:'Sale Url.4'},
+      {dl:'Description Local.5',dd:'Description Dest.5',qty:'Quantity.5',uv:'Unit Value.5',uw:'Unit Weight.5',hs:'HS Code.5',br:'Brand 5',sku:'Product SKU. 5',mo:'Model 5',mc:'Material Chinese. 5',me:'Material English. 5',uc:'Usage in Chinese. 5',ue:'Usage English. 5',url:'Sale Url.5'},
+    ];
+    for(let i=0;i<Math.min(skuList.length,5);i++){
+      const s=skuList[i];const c=SKU_COLS[i];
+      row[c.dl]=s.desc; row[c.dd]=s.desc;
+      row[c.qty]=s.qty;
+      row[c.uv]=s.uv!=null?s.uv:'';
+      row[c.uw]=s.uw!=null?s.uw:'';
+      row[c.hs]=''; row[c.br]=''; row[c.sku]=s.sku;
+      row[c.mo]=''; row[c.mc]=''; row[c.me]='';
+      row[c.uc]=''; row[c.ue]=''; row[c.url]='';
+    }
+
+    outputRows.push({row,dimsAuto,skuCount:skuList.length});
+  }
+
+  // Log unknown SKUs
+  if(unknownSkus.size>0){
+    gpsLog(`⚠️ ${unknownSkus.size} SKU(s) not found in catalogue — description taken from sales sheet, dims/value blank:`,'warn');
+    unknownSkus.forEach(s=>gpsLog('  '+s,'warn'));
+  }
+  gpsLog(`✅ ${orderKeys.length} orders processed — ${autoCount} auto-filled, ${manualCount} need manual dims`);
+
+  document.getElementById('g-orders').textContent=orderKeys.length;
+  document.getElementById('g-auto').textContent=autoCount;
+  document.getElementById('g-manual').textContent=manualCount;
+
+  // Build Excel — matching DEMO file exactly
+  const today=new Date();
+  const dd=String(today.getDate()).padStart(2,'0');
+  const mm=String(today.getMonth()+1).padStart(2,'0');
+  const yyyy=today.getFullYear();
+  const dateStr=`${yyyy}${mm}${dd}`;
+  gpsOutputName=`Demo_${dateStr}.xlsx`;
+
+  const flatRows=outputRows.map(o=>o.row);
+  const headers=flatRows.length>0?Object.keys(flatRows[0]):[];
+
+  // Exact yellow-highlighted header columns from DEMO file (fill=FFFFFF00)
+  const YELLOW_HEADERS=new Set([
+    '*Country code','Reference ID1','receiver Name','receiver ZIP',
+    'receiver Address 1','receiver City','receiver Phone','receiver Email',
+    '*Weight','Quantity.1','Product SKU. 1',
+    'Description Local.2','Description Dest.2','Quantity.2','Unit Value.2','Unit Weight.2','Product SKU. 2',
+  ]);
+  // Hidden columns — exact match from DEMO file
+  const HIDDEN_COLS=new Set([
+    'Sender ZIP','Sender Phone','Sender Tax ID','Customs Currency',
+    'Dimension Unit','Manifest weight unit',
+    'Material Chinese 1','Usage English 1','Sale Url.1',
+    'Material Chinese. 2','Usage in Chinese 2','Usage English. 2','Sale Url.2',
+    'Material Chinese. 3','Sale Url.3',
+  ]);
+
+  // Exact column widths from DEMO file (by header name)
+  const COL_WIDTHS={
+    '*Warehouse Code':11.86,'*Country code':9.14,'*Shipway Code':15.43,'Reference ID1':14.0,
+    'Sign in service':16.0,'*Is it FBA':11.71,'Fba Code':12.71,
+    'receiver Name':24.29,'receiver Company Name':18.71,'receiver ZIP':11.14,
+    'receiver Address 1':49.86,'receiver Address 2':42.14,'receiver City':15.43,
+    'receiver State':14.86,'receiver Phone':18.57,'receiver Email':32.29,
+    'Sender Name':12.43,'Sender Company Name':18.71,'Sender Address 1':54.29,
+    'Sender Address 2':18.71,'Sender City':15.86,'Sender Consignee ID':18.71,
+    'Sender State':13.29,'Sender Country Code':21.29,'Sender ZIP':11.71,
+    'Sender Phone':13.29,'Sender Email':18.71,'Sender Tax ID':14.0,
+    'Customs Currency':16.43,'Dimension Unit':2.57,'Manifest weight unit':7.14,
+    '*Number of boxes':17.57,'*Weight':9.43,'*Length':8.57,'*Width':9.43,'*Height':8.57,
+    'Remark':18.71,
+    'Description Local.1':56.14,'Description Dest.1':56.14,'Quantity.1':9.0,
+    'Unit Value.1':13.29,'Unit Weight.1':14.0,'HS Code.1':9.86,'Brand 1':8.0,'Product SKU. 1':16.57,
+    'Model 1':9.43,'Material Chinese 1':18.0,'Material English 1':18.0,
+    'Usage in Chinese 1':18.0,'Usage English 1':15.57,'Sale Url.1':11.71,
+    'Description Local.2':18.71,'Description Dest.2':18.0,'Quantity.2':11.71,
+    'Unit Value.2':13.29,'Unit Weight.2':14.0,'HS Code.2':11.0,'Brand. 2':10.14,'Product SKU. 2':14.86,
+    'Model 2':9.43,'Material Chinese. 2':18.71,'Material English. 2':18.0,
+    'Usage in Chinese 2':18.0,'Usage English. 2':16.43,'Sale Url.2':11.71,
+    'Description Local.3':18.71,'Description Dest.3':18.0,'Quantity.3':11.71,
+    'Unit Value.3':13.29,'Unit Weight.3':14.0,'HS Code.3':11.0,'Brand 3':9.43,'Product SKU. 3':14.86,
+    'Model 3':9.43,'Material Chinese. 3':18.71,'Material English. 3':18.0,
+    'Usage in Chinese. 3':18.0,'Usage in English. 3':16.43,'Sale Url.3':11.71,
+    // Slot 4
+    'Description Local.4':18.71,'Description Dest.4':18.0,'Quantity.4':11.71,
+    'Unit Value.4':13.29,'Unit Weight.4':14.0,'HS Code.4':11.0,'Brand 4':9.43,'Product SKU. 4':14.86,
+    'Model 4':9.43,'Material Chinese. 4':18.71,'Material English. 4':18.0,
+    'Usage in Chinese. 4':18.0,'Usage English. 4':16.43,'Sale Url.4':11.71,
+    // Slot 5
+    'Description Local.5':18.71,'Description Dest.5':18.0,'Quantity.5':11.71,
+    'Unit Value.5':13.29,'Unit Weight.5':14.0,'HS Code.5':11.0,'Brand 5':9.43,'Product SKU. 5':14.86,
+    'Model 5':9.43,'Material Chinese. 5':18.71,'Material English. 5':18.0,
+    'Usage in Chinese. 5':18.0,'Usage English. 5':16.43,'Sale Url.5':11.71,
+  };
+
+  const YELLOW_FILL={patternType:'solid',fgColor:{rgb:'FFFF00'},bgColor:{indexed:64}};
+  const ORANGE_FILL={patternType:'solid',fgColor:{rgb:'FFE0B2'},bgColor:{indexed:64}};
+  const FONT={name:'Calibri',sz:11};
+
+  // Build worksheet manually so every cell exists before styling
+  const ws={};
+  // Write header row first
+  headers.forEach((h,C)=>{
+    const ref=XLSX.utils.encode_cell({r:0,c:C});
+    ws[ref]={v:h,t:'s',s:{font:FONT}};
+    if(YELLOW_HEADERS.has(h)) ws[ref].s.fill=YELLOW_FILL;
+  });
+  // Write data rows
+  flatRows.forEach((row,rowIdx)=>{
+    const R=rowIdx+1;
+    const dataRow=outputRows[rowIdx];
+    const needsManual=dataRow&&!dataRow.dimsAuto;
+    headers.forEach((h,C)=>{
+      const ref=XLSX.utils.encode_cell({r:R,c:C});
+      const val=row[h];
+      const isDimCol=(h==='*Length'||h==='*Width'||h==='*Height');
+      let t='s';
+      if(typeof val==='number') t='n';
+      else if(typeof val==='boolean') t='b';
+      ws[ref]={v:(val===''||val==null)?'':val, t, s:{font:FONT}};
+      if(val===''||val==null) ws[ref].t='z';
+      if(isDimCol && needsManual) ws[ref].s.fill=ORANGE_FILL;
+    });
+  });
+  // Set worksheet range
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:flatRows.length,c:headers.length-1}});
+
+  // Exact column widths + hidden flags
+  ws['!cols']=headers.map(h=>{const w={wch:COL_WIDTHS[h]||14};if(HIDDEN_COLS.has(h))w.hidden=true;return w;});
+
+  // Autofilter on row 1 (same as DEMO: A1 to last col)
+  const lastCol=XLSX.utils.encode_col(headers.length-1);
+  ws['!autofilter']={ref:`A1:${lastCol}1`};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'DEMO');
+  const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});
+  gpsOutputBlob=new Blob([wbout],{type:'application/octet-stream'});
+
+  // Download button
+  const btn=document.createElement('button');
+  btn.className='btn-green';
+  btn.textContent=`⬇️ Download ${gpsOutputName}`;
+  btn.onclick=()=>{
+    const url=URL.createObjectURL(gpsOutputBlob);
+    const a=document.createElement('a');a.href=url;a.download=gpsOutputName;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  document.getElementById('gpsDownloadBtn').appendChild(btn);
+
+  // Preview table
+  const previewCols=['Reference ID1','*Country code','receiver Name','receiver ZIP','receiver Address 1','receiver Address 2','receiver City','receiver Phone','*Weight','*Length','*Width','*Height','Product SKU. 1','Quantity.1','Product SKU. 2','Quantity.2','Product SKU. 3','Quantity.3'];
+  let html='<thead><tr>'+previewCols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  for(const {row,dimsAuto} of outputRows){
+    const cls=!dimsAuto?'class="row-blank-dim"':'';
+    html+=`<tr ${cls}>`+previewCols.map(c=>`<td>${row[c]!=null&&row[c]!==''?row[c]:''}</td>`).join('')+'</tr>';
+  }
+  html+='</tbody>';
+  document.getElementById('gpsPreviewTable').innerHTML=html;
+}
+
+// ─── TAB 4: PRODUCTION FORECAST ───────────────────────────────────────────
+let fcFcstData=null, fcSalesData=null, fcInvData=null, fcTableData=[], fcFilter='all', fcSkuSort='none', fcSalesWeeks=1;
+
+function fcWireFile(fileId, nameId, zoneId, setter){
+  document.getElementById(fileId).addEventListener('change',function(){
+    if(!this.files[0])return;
+    readFile(this.files[0],rows=>{setter(rows);document.getElementById(nameId).textContent=this.files[0].name;document.getElementById(zoneId).classList.add('has-file');fcCheckReady();});
+  });
+}
+fcWireFile('fcFcstFile','fcFcstName','fcFcstZone',r=>{fcFcstData=r;});
+fcWireFile('fcSalesFile','fcSalesName','fcSalesZone',r=>{fcSalesData=r;});
+fcWireFile('fcInvFile','fcInvName','fcInvZone',r=>{fcInvData=r;});
+
+function fcCheckReady(){
+  document.getElementById('fcBtn').disabled=!(fcInvData); // colleague forecast is optional
+}
+
+function fcSetWeeks(n){
+  fcSalesWeeks=n;
+  [1,2,3,4,99].forEach(k=>{
+    const btn=document.getElementById('fcW-'+k);
+    if(!btn)return;
+    const active=k===n;
+    const is4plus=k===99;
+    btn.style.background=active?(is4plus?'#7c3aed':'#0369a1'):'';
+    btn.style.color=active?'#fff':(is4plus?'#7c3aed':'');
+    btn.style.borderColor=active?(is4plus?'#7c3aed':'#0369a1'):(is4plus?'#7c3aed':'#d0d0d0');
+  });
+  const lbl=document.getElementById('fcWeeksLabel');
+  if(lbl) lbl.textContent=n===99?'4+ weeks (smoothed)':(n+' week'+(n>1?'s':''));
+  // Show α slider only for 4+ mode
+  const alphaRow=document.getElementById('fcAlphaRow');
+  if(alphaRow) alphaRow.style.display=n===99?'flex':'none';
+}
+
+function fcUpdateAlpha(v){
+  const alpha=(parseInt(v)/10).toFixed(1);
+  const lbl=document.getElementById('fcAlphaLabel');
+  if(lbl) lbl.textContent=alpha;
+}
+
+function fcToggleSkuSort(){
+  // cycle: none → asc → desc → asc ...
+  fcSkuSort = fcSkuSort==='asc' ? 'desc' : 'asc';
+  const icon = document.getElementById('fcSkuSortIcon');
+  icon.textContent = fcSkuSort==='asc' ? '↑' : '↓';
+  icon.style.opacity='1';
+  renderFcTable();
+}
+
+const FC_CHIP_STYLES={
+  'all':    {bg:'#111',color:'#fff',border:'#111'},
+  'produce':{bg:'#fff8f0',color:'#92400e',border:'#d97706'},
+  'flagged':{bg:'#fff8f0',color:'#78350f',border:'#f59e0b'},
+  'missing':{bg:'#fff5f5',color:'#991b1b',border:'#dc2626'},
+  'covered':{bg:'#f0fdf4',color:'#166534',border:'#16a34a'},
+};
+function fcSetFilter(f){
+  fcFilter=f;
+  ['all','produce','flagged','missing','covered'].forEach(k=>{
+    const btn=document.getElementById('fcF-'+k);
+    if(!btn)return;
+    const active=k===f;
+    const s=FC_CHIP_STYLES[k];
+    if(active){
+      btn.style.background='#111'; btn.style.color='#fff'; btn.style.borderColor='#111';
+      btn.style.fontWeight='700'; btn.style.boxShadow='0 2px 6px rgba(0,0,0,0.18)';
+    } else {
+      btn.style.background=s.bg; btn.style.color=s.color; btn.style.borderColor=s.border;
+      btn.style.fontWeight=k==='produce'?'600':'400'; btn.style.boxShadow='';
+    }
+  });
+  renderFcTable();
+}
+
+function renderFcTable(){
+  let rows=fcTableData;
+  if(fcFilter==='produce')  rows=rows.filter(r=>r.produceQty>0);
+  else if(fcFilter==='flagged')  rows=rows.filter(r=>r.flagged);
+  else if(fcFilter==='missing')  rows=rows.filter(r=>r.missing);
+  else if(fcFilter==='covered')  rows=rows.filter(r=>r.produceQty===0&&!r.missing);
+
+  // Apply SKU sort if active
+  if(fcSkuSort==='asc')       rows=[...rows].sort((a,b)=>a.sku.localeCompare(b.sku));
+  else if(fcSkuSort==='desc') rows=[...rows].sort((a,b)=>b.sku.localeCompare(a.sku));
+
+  // Dim forecast columns if no forecast file uploaded
+  const hasFcst=fcFcstData!=null;
+  const methodEl=document.getElementById('fcMethodLabel');
+  const periodEl=document.getElementById('fcSalesPeriodLabel');
+  const wkLabel=fcSalesWeeks===99?'smoothed':fcSalesWeeks===1?'1 week':fcSalesWeeks+' weeks';
+  if(periodEl) periodEl.textContent='total in '+wkLabel;
+  if(methodEl){
+    if(fcSalesWeeks===99){const av=document.getElementById('fcAlpha');const a=av?parseInt(av.value)/10:0.3;methodEl.textContent='exp. smoothed (α='+a+')'+(hasFcst?', capped by colleague':'');}
+    else if(fcSalesWeeks>1){methodEl.textContent='weighted avg '+fcSalesWeeks+' wks'+(hasFcst?', capped by colleague':'');}
+    else{methodEl.textContent='this week sales'+(hasFcst?', capped by colleague':'');}
+  }
+  ['fcTh-avgdaily','fcTh-weeklyfcst'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.opacity=hasFcst?'1':'0.35';
+  });
+
+  const tbody=document.getElementById('fcTableBody');
+  tbody.innerHTML='';
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:#999;padding:24px">No SKUs in this filter</td></tr>';
+    return;
+  }
+  for(const r of rows){
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid #f3f4f6';
+    let rowBg='';
+    if(r.missing)          rowBg='background:#fff5f5';
+    else if(r.flagged)     rowBg='background:#fff8f0';
+    else if(r.produceQty>0)rowBg='background:#fffdf0';
+
+    const avgStr    = r.avgDaily!=null ? r.avgDaily.toFixed(1) : '<span style="color:#bbb">—</span>';
+    const fcstStr   = r.weeklyFcst!=null ? r.weeklyFcst : '<span style="color:#bbb">—</span>';
+    const salesStr  = r.totalSales!=null ? r.totalSales : (r.actualSales!=null ? r.actualSales : '<span style="color:#bbb">—</span>');
+    const demandStyle = r.flagged ? 'color:#d97706;font-weight:700' : r.missing ? 'color:#dc2626;font-weight:700' : 'font-weight:600';
+    const produceStyle= r.produceQty>0 ? 'font-weight:700;color:#d97706' : 'color:#16a34a';
+
+    const statusBadge = r.missing
+      ? '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 5px;font-size:10px;font-weight:600">🔴 No fcst</span>'
+      : r.produceQty>0
+        ? `<span class="badge" style="background:#fef3c7;color:#92400e">⚠️ Produce ${r.produceQty}</span>`
+        : '<span style="background:#f0fdf4;color:#15803d;border-radius:4px;padding:2px 5px;font-size:10px;font-weight:600">✅</span>';
+
+    const prefix = r.missing ? '🔴 ' : r.flagged ? '🔶 ' : '';
+    const otpBadge = r.isOtpMerged ? ' <span style="font-size:10px;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 5px;font-weight:600">OTP merged</span>' : '';
+
+    tr.setAttribute('style', rowBg);
+    tr.innerHTML=`
+      <td style="font-family:monospace;font-size:11px;padding:9px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${prefix}${r.sku}${otpBadge}</td>
+      <td style="font-size:11px;padding:9px 8px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.name}">${r.name}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px">${avgStr}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px">${fcstStr}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px">${salesStr}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px;${demandStyle}">${r.demandUsed}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px">${r.onHand}</td>
+      <td style="text-align:center;padding:9px 6px;font-size:12px;${produceStyle}">${r.produceQty>0?r.produceQty:'—'}</td>
+      <td style="padding:9px 6px;text-align:center">${statusBadge}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function runForecast(){
+  document.getElementById('fcResults').style.display='none';
+  fcTableData=[];
+
+  // ── 1. Parse colleague's forecast sheet (optional) ──────────────────
+  const forecastMap={}, forecastName={};
+  if(fcFcstData){
+    const fr=fcFcstData[0];
+    const fSkuCol  = findCol(fr,['itemnumber','item number','itemnum','sku','item']);
+    const fAvgCol  = findCol(fr,['avgdaily','avg daily','daily','average daily','averagedaily']);
+    const fNameCol = findCol(fr,['productname','product name','name','description','product']);
+    if(!fSkuCol||!fAvgCol){
+      alert('Cannot detect SKU or Avg Daily columns in forecast file. Found: '+Object.keys(fr).join(', '));
+      return;
+    }
+    for(const r of fcFcstData){
+      const rawSku=String(r[fSkuCol]||'').trim();
+      const sku=canonicalSku(rawSku);
+      const avg=parseFloat(String(r[fAvgCol]||'').replace(/,/g,''));
+      const name=fNameCol?String(r[fNameCol]||'').trim():'';
+      if(!sku||isNaN(avg))continue;
+      forecastMap[sku]=(forecastMap[sku]||0)+avg;
+      if(name&&!forecastName[sku])forecastName[sku]=name;
+    }
+  }
+
+  // ── 2. Parse actual sales (optional) with weighted average ─────────────
+  // Weights by number of weeks: most recent week always gets highest weight
+  // Week order in the sales file: assumed chronological (oldest first, newest last)
+  const WEIGHTS={1:[1],2:[0.4,0.6],3:[0.2,0.3,0.5],4:[0.1,0.2,0.3,0.4]};
+  // Helper: group all sales rows into weekly buckets (by date col or evenly by index)
+  // Split rows into N equal chunks by row order — simple and reliable.
+  // No date parsing needed: user tells us how many weeks the file contains.
+  function buildWeekBuckets(rows,nWeeks,sSkuCol,sQtyCol,sProdCol){
+    const buckets=Array.from({length:nWeeks},()=>({}));
+    const names=Array.from({length:nWeeks},()=>({}));
+    const chunkSize=Math.ceil(rows.length/nWeeks);
+    rows.forEach((r,i)=>{
+      const wi=Math.min(Math.floor(i/chunkSize),nWeeks-1);
+      const sku=canonicalSku(String(r[sSkuCol]||'').trim());
+      const qty=parseInt(r[sQtyCol])||0;
+      const name=sProdCol?String(r[sProdCol]||'').trim():'';
+      if(!sku) return;
+      buckets[wi][sku]=(buckets[wi][sku]||0)+qty;
+      if(name&&!names[wi][sku])names[wi][sku]=name;
+    });
+    return {buckets,names};
+  }
+
+  const salesMap={}, salesName={}, totalSalesMap={};
+
+  // Pre-compute totalSalesMap = full file total per SKU (excl Cancelled)
+  // This is shown in "Total sales in period" column — the true total you shipped
+  if(fcSalesData){
+    const sr0=fcSalesData[0];
+    const tSkuCol=findCol(sr0,['itemnumber','item number','itemnum','sku']);
+    const tQtyCol=findCol(sr0,['quantity','qty']);
+    const tStCol=findCol(sr0,['status']);
+    if(tSkuCol&&tQtyCol){
+      for(const r of fcSalesData){
+        const st=tStCol?String(r[tStCol]||'').trim().toLowerCase():'';
+        if(st==='cancelled'||st==='canceled'||st==='voided'||st==='void') continue;
+        const sku=canonicalSku(String(r[tSkuCol]||'').trim());
+        const qty=parseInt(r[tQtyCol])||0;
+        if(!sku) continue;
+        totalSalesMap[sku]=(totalSalesMap[sku]||0)+qty;
+      }
+    }
+  }
+  if(fcSalesData){
+    const sr=fcSalesData[0];
+    const sSkuCol    = findCol(sr,['itemnumber','item number','itemnum','sku']);
+    const sQtyCol    = findCol(sr,['quantity','qty']);
+    const sProdCol   = findCol(sr,['productname','product name','product']);
+    const sStatusCol = findCol(sr,['status']);
+    // Helper: skip cancelled/voided orders
+    const isValidRow = r => {
+      if(!sStatusCol) return true;
+      const st=String(r[sStatusCol]||'').trim().toLowerCase();
+      return !st.includes('cancel') && !st.includes('void') && !st.includes('return') && !st.includes('refund');
+    };
+    if(sSkuCol&&sQtyCol){
+      if(fcSalesWeeks===1){
+        // Single week: use directly
+        for(const r of fcSalesData){
+          if(!isValidRow(r)) continue; // skip Cancelled orders
+          const sku=canonicalSku(String(r[sSkuCol]||'').trim());
+          const qty=parseInt(r[sQtyCol])||0;
+          const name=sProdCol?String(r[sProdCol]||'').trim():'';
+          if(!sku)continue;
+          salesMap[sku]=(salesMap[sku]||0)+qty;
+          if(name&&!salesName[sku])salesName[sku]=name;
+        }
+      } else if(fcSalesWeeks===99){
+        // ── Exponential smoothing (4+ weeks) ────────────────────────────
+        // α read from slider; default 0.3
+        const alphaVal=document.getElementById('fcAlpha');
+        const alpha=alphaVal ? parseInt(alphaVal.value)/10 : 0.3;
+        // Group into buckets — use as many weeks as exist in the file (up to 52)
+        // We detect actual weeks present, then iterate oldest→newest applying smoothing
+        const DETECT_WEEKS=52;
+        const validSalesRowsExp=fcSalesData.filter(isValidRow);
+        const {buckets,names}=buildWeekBuckets(validSalesRowsExp,DETECT_WEEKS,sSkuCol,sQtyCol,sProdCol);
+        // Find non-empty buckets
+        const activeBuckets=buckets.map((b,i)=>({b,n:names[i]})).filter(({b})=>Object.keys(b).length>0);
+        if(activeBuckets.length>0){
+        // Collect all SKUs across all buckets
+        const allSku=new Set(activeBuckets.flatMap(({b})=>Object.keys(b)));
+        for(const sku of allSku){
+          // Initialise with first period's value (seed), then smooth forward
+          let smoothed=activeBuckets[0].b[sku]||0;
+          for(let i=1;i<activeBuckets.length;i++){
+            const actual=activeBuckets[i].b[sku]||0;
+            smoothed=Math.round(alpha*actual+(1-alpha)*smoothed);
+          }
+          salesMap[sku]=smoothed;
+          // totalSalesMap already pre-computed globally
+          for(const {n} of activeBuckets){ if(n[sku]){salesName[sku]=n[sku];break;} }
+        }
+        } // end activeBuckets guard
+      } else {
+        // ── Weighted moving average (2–4 weeks) ─────────────────────────
+        const validSalesRows=fcSalesData.filter(isValidRow);
+        const {buckets,names}=buildWeekBuckets(validSalesRows,fcSalesWeeks,sSkuCol,sQtyCol,sProdCol);
+        const weights=WEIGHTS[fcSalesWeeks]||WEIGHTS[4];
+        const allSaleSkus=new Set(buckets.flatMap(b=>Object.keys(b)));
+        for(const sku of allSaleSkus){
+          let weighted=0;
+          buckets.forEach((b,wi)=>{ weighted+=(b[sku]||0)*weights[wi]; });
+          salesMap[sku]=Math.round(weighted);
+          // totalSalesMap already pre-computed globally (full file total excl cancelled)
+          for(const nb of names){ if(nb[sku]){salesName[sku]=nb[sku];break;} }
+        }
+      }
+    }
+  }
+
+  // ── 3. Parse on-hand inventory ───────────────────────────────────────
+  const ir=fcInvData[0];
+  const iSkuCol = findCol(ir,['itemnumber','item number','itemnum','sku','item']);
+  const iQtyCol = findCol(ir,['availablephysical','available physical','available','onhand','on hand','qty','quantity','physical']);
+  const onHand={};
+  if(iSkuCol&&iQtyCol){
+    for(const r of fcInvData){
+      const rawSku=String(r[iSkuCol]||'').trim();
+      const sku=canonicalSku(rawSku);  // merge OTP pairs
+      const qty=parseFloat(String(r[iQtyCol]||'').replace(/,/g,''))||0;
+      if(!sku)continue;
+      onHand[sku]=(onHand[sku]||0)+qty;
+    }
+  }
+
+  // ── 4. Build combined SKU set ────────────────────────────────────────
+  const hasForecast = fcFcstData!=null && Object.keys(forecastMap).length>0;
+  const allSkus=new Set([...Object.keys(forecastMap),...Object.keys(salesMap),...Object.keys(onHand)]); // include inv-only SKUs
+  if(allSkus.size===0){
+    alert('No SKU data found. Please check your uploaded files.');
+    return;
+  }
+  let totalSkus=0,needProduce=0,fullyCovered=0,flaggedCount=0,missingCount=0;
+
+  // Find which canonical SKUs had OTP partners merged in
+  const otpMergedSkus=new Set();
+  Object.entries(OTP_MAP).forEach(([otp,primary])=>{
+    if(otp!==primary && allSkus.has(primary)) otpMergedSkus.add(primary);
+  });
+
+  for(const sku of [...allSkus].sort()){
+    const avgDaily    = forecastMap[sku]??null;
+    const weeklyFcst  = avgDaily!=null ? Math.ceil(avgDaily*7) : null;
+    const actualSales = salesMap[sku]??null;  // weighted for demand calc
+    const totalSales = totalSalesMap[sku]??null;  // raw total shown in UI
+    const name        = forecastName[sku]||salesName[sku]||'';
+    const isOtpMerged = otpMergedSkus.has(sku);
+
+    // missing = in sales but not in colleague forecast (only relevant if forecast was uploaded)
+    const missing = hasForecast && avgDaily==null && actualSales!=null;
+    const invOnly = avgDaily==null && actualSales==null; // in inventory but no forecast/sales data
+
+    // Demand logic:
+    // - If colleague forecast uploaded: MAX(weeklyFcst, weighted sales)
+    // - If no forecast: use weighted sales directly
+    let demandUsed;
+    if(hasForecast && weeklyFcst!=null){
+      demandUsed = Math.max(weeklyFcst, actualSales??0);
+    } else {
+      // No forecast — rely purely on weighted sales average
+      demandUsed = actualSales??0;
+    }
+
+    // flagged = actual sales exceeded the weekly forecast (only when forecast exists)
+    const flagged = hasForecast && !missing && weeklyFcst!=null && (totalSales??actualSales??0)>weeklyFcst;
+
+    const stock      = Math.round(onHand[sku]||0);
+    const produceQty = Math.max(0, demandUsed-stock);
+
+    fcTableData.push({sku,name,avgDaily,weeklyFcst,actualSales,totalSales,demandUsed,onHand:stock,produceQty,flagged,missing,invOnly,isOtpMerged,hasForecast});
+    totalSkus++;
+    if(produceQty>0) needProduce++; else if(!missing) fullyCovered++;
+    if(flagged)  flaggedCount++;
+    if(missing)  missingCount++;
+  }
+
+  // Sort: missing first, then flagged+need, then need, then covered
+  fcTableData.sort((a,b)=>{
+    const score=r=>r.missing?4:(r.flagged&&r.produceQty>0?3:(r.produceQty>0?2:(r.flagged?1:0)));
+    return score(b)-score(a)||b.produceQty-a.produceQty;
+  });
+
+  document.getElementById('fc-skus').textContent=totalSkus;
+  document.getElementById('fc-produce').textContent=needProduce;
+  document.getElementById('fc-covered').textContent=fullyCovered;
+  document.getElementById('fc-flagged').textContent=flaggedCount;
+  document.getElementById('fc-missing').textContent=missingCount;
+  document.getElementById('fcResults').style.display='block';
+  fcSetFilter('all');
+
+  // ── 5. Build Excel download ──────────────────────────────────────────
+  const today=new Date();
+  const ds=`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const fcName=`Production_Forecast_${ds}.xlsx`;
+
+  const dlRows=fcTableData.map(r=>({
+    'SKU':r.sku,
+    'Product Name':r.name,
+    'Avg Daily':r.avgDaily!=null?r.avgDaily:'',
+    'Weekly Forecast (×7)':r.weeklyFcst!=null?r.weeklyFcst:'',
+    'Total Sales in Period':r.totalSales!=null?r.totalSales:(r.actualSales!=null?r.actualSales:''),
+    'Demand Used (MAX)':r.demandUsed,
+    'On-Hand Stock':r.onHand,
+    'Produce Qty':r.produceQty,
+    'Status':r.missing?'No Forecast':r.produceQty>0?'Produce':'Covered',
+    'Flag':r.missing?'Missing from forecast':r.flagged?'Sales exceeded forecast':''
+  }));
+
+  const wsF={};
+  const hdrKeys=Object.keys(dlRows[0]);
+  const F={name:'Calibri',sz:11};
+  const FB={name:'Calibri',sz:11,bold:true};
+  const FBW={name:'Calibri',sz:11,bold:true,color:{rgb:'FFFFFF'}};
+  const fillDark  ={patternType:'solid',fgColor:{rgb:'1F2937'},bgColor:{indexed:64}};
+  const fillOrange={patternType:'solid',fgColor:{rgb:'FFF8F0'},bgColor:{indexed:64}};
+  const fillRed   ={patternType:'solid',fgColor:{rgb:'FFF5F5'},bgColor:{indexed:64}};
+  const fillYellow={patternType:'solid',fgColor:{rgb:'FEFCE8'},bgColor:{indexed:64}};
+  const fillGreen ={patternType:'solid',fgColor:{rgb:'F0FDF4'},bgColor:{indexed:64}};
+
+  // Header row
+  hdrKeys.forEach((h,C)=>{
+    const ref=XLSX.utils.encode_cell({r:0,c:C});
+    wsF[ref]={v:h,t:'s',s:{font:FBW,fill:fillDark}};
+  });
+  // Data rows
+  dlRows.forEach((row,ri)=>{
+    const R=ri+1;
+    const isMissing=row['Flag']==='Missing from forecast';
+    const isFlagged=row['Flag']==='Sales exceeded forecast';
+    const isNeed=row['Status']==='Produce';
+    const rowFill=isMissing?fillRed:isFlagged?fillOrange:isNeed?fillYellow:fillGreen;
+    hdrKeys.forEach((h,C)=>{
+      const ref=XLSX.utils.encode_cell({r:R,c:C});
+      const val=row[h];
+      const t=typeof val==='number'?'n':'s';
+      let font={...F};
+      if(h==='Produce Qty'&&val>0) font={...FB,color:{rgb:'D97706'}};
+      if(h==='Status'&&isNeed)     font={...FB,color:{rgb:'92400E'}};
+      if(h==='Status'&&isMissing)  font={...FB,color:{rgb:'DC2626'}};
+      wsF[ref]={v:val===''?'':val,t:val===''?'z':t,s:{font,fill:rowFill}};
+    });
+  });
+  wsF['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:dlRows.length,c:hdrKeys.length-1}});
+  wsF['!cols']=hdrKeys.map(h=>({wch:Math.max(h.length,...dlRows.map(r=>String(r[h]||'').length))+4}));
+  wsF['!autofilter']={ref:`A1:${XLSX.utils.encode_col(hdrKeys.length-1)}1`};
+
+  const wbF=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbF,wsF,'Forecast');
+  const blob=new Blob([XLSX.write(wbF,{bookType:'xlsx',type:'array',cellStyles:true})],{type:'application/octet-stream'});
+
+  const dlBtn=document.getElementById('fcDownloadBtn');
+  dlBtn.innerHTML='';
+  // Download button
+  const btn=document.createElement('button');
+  btn.className='btn-green';
+  btn.style.marginBottom='8px';
+  btn.textContent=`⬇️ Download ${fcName}`;
+  btn.onclick=()=>{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fcName;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  dlBtn.appendChild(btn);
+  // Send to Production Calc button
+  const sendBtn=document.createElement('button');
+  sendBtn.style.cssText='width:100%;padding:12px;background:#7c3aed;color:#fff;border-color:#7c3aed;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px';
+  sendBtn.textContent='⚡ Send to Production Calculator';
+  sendBtn.onclick=fcOpenSendModal;
+  dlBtn.appendChild(sendBtn);
+}
+
+
+// ─── FORECAST → PRODUCTION CALCULATOR BRIDGE ──────────────────────────────
+function fcSendRows_getData(){ return fcTableData; } // show all SKUs, use stock status tag to differentiate
+let _fcSendSort='none', _fcSendCol='sku';
+
+function fcRenderSendRows(){
+  const modal=document.getElementById('fcSendModal');
+  if(!modal) return;
+  // Save current qty values before re-render
+  const savedQtys={};
+  modal.querySelectorAll('.fc-send-qty').forEach(inp=>{ savedQtys[inp.getAttribute('data-sku')]=inp.value; });
+  // Save checked state
+  const savedChecked={};
+  modal.querySelectorAll('.fc-send-chk').forEach(cb=>{ savedChecked[cb.getAttribute('data-sku')]=cb.checked; });
+
+  let rows=[...fcSendRows_getData()];
+  if(_fcSendCol==='sku'){
+    if(_fcSendSort==='asc') rows.sort((a,b)=>a.sku.localeCompare(b.sku));
+    else if(_fcSendSort==='desc') rows.sort((a,b)=>b.sku.localeCompare(a.sku));
+  } else {
+    if(_fcSendSort==='asc') rows.sort((a,b)=>a.demandUsed-b.demandUsed);
+    else if(_fcSendSort==='desc') rows.sort((a,b)=>b.demandUsed-a.demandUsed);
+  }
+  const skuIcon=document.getElementById('sendSortSku');
+  const qtyIcon=document.getElementById('sendSortQty');
+  if(skuIcon) skuIcon.textContent=_fcSendCol==='sku'?(_fcSendSort==='asc'?'↑':'↓'):'↕';
+  if(qtyIcon) qtyIcon.textContent=_fcSendCol==='qty'?(_fcSendSort==='asc'?'↑':'↓'):'↕';
+
+  // Show/hide on-hand column
+  const hasInvSend=fcInvData!=null;
+  const ohTh=document.getElementById('sendThOnHand');
+  if(ohTh) ohTh.style.display=hasInvSend?'':'none';
+
+  // Build on-hand lookup from fcInvData
+  const sendOnHand={};
+  if(hasInvSend){
+    const ir=fcInvData[0];
+    const iSku=findCol(ir,['itemnumber','item number','itemnum','sku','item']);
+    const iQty=findCol(ir,['availablephysical','available physical','available','onhand','on hand','qty','quantity','physical']);
+    if(iSku&&iQty) for(const r of fcInvData){
+      const s=String(r[iSku]||'').trim();
+      const q=parseFloat(String(r[iQty]||'').replace(/,/g,''))||0;
+      if(s) sendOnHand[s]=(sendOnHand[s]||0)+q;
+    }
+  }
+
+  let rowsHtml='';
+  rows.forEach(r=>{
+    const avgDailyStr=r.avgDaily!=null?r.avgDaily.toFixed(1):'<span style="color:#bbb">—</span>';
+    const savedQty=savedQtys[r.sku]||r.produceQty;
+    const isChecked=(savedChecked[r.sku]!==undefined)?savedChecked[r.sku]:true;
+    const stock=hasInvSend?Math.round(sendOnHand[r.sku]||0):null;
+    const stockDisplay=stock===0?'<span style="color:#16a34a;font-size:15px">✓</span>':stock;
+    const ohCell=hasInvSend?`<td style="padding:10px;text-align:center;font-size:13px;color:#555">${stockDisplay}</td>`:'';
+    rowsHtml+=`<tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:10px;text-align:center"><input type="checkbox" class="fc-send-chk" data-sku="${r.sku}" ${isChecked?'checked':''} onchange="fcUpdateSendCount()"></td>
+      <td style="padding:10px;font-family:monospace;font-size:12px;color:#111">${r.sku}</td>
+      <td style="padding:10px;font-size:12px;color:#333;max-width:200px;white-space:normal">${r.name}</td>
+      <td style="padding:10px;text-align:center;color:#555;font-size:13px">${avgDailyStr}</td>
+      <td style="padding:10px;text-align:center;color:#555;font-size:13px">${r.demandUsed}</td>
+      ${ohCell}
+      <td style="padding:10px;text-align:center">
+        <input type="number" class="fc-send-qty" data-sku="${r.sku}" value="${savedQty}" min="1"
+          style="width:72px;padding:6px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:14px;font-weight:700;text-align:center;color:#111;background:#fff">
+      </td>
+    </tr>`;
+  });
+  const body=document.getElementById('fcSendBody');
+  if(body){ body.innerHTML=rowsHtml; fcUpdateSendCount(); }
+}
+
+function fcToggleSendSort(col){
+  if(_fcSendCol===col){
+    _fcSendSort=_fcSendSort==='asc'?'desc':'asc';
+  } else {
+    _fcSendCol=col;
+    _fcSendSort=col==='sku'?'asc':'desc';
+  }
+  fcRenderSendRows();
+}
+
+function fcOpenSendModal(){
+  // Include ALL SKUs that need production, even if missing from colleague forecast
+  const needRows=fcTableData;
+  if(!needRows.length){alert('No forecast data — nothing to send!');return;}
+
+  // Remove any existing modal
+  const existing=document.getElementById('fcSendModal');
+  if(existing) existing.remove();
+
+  // Build rows HTML
+  let rowsHtml='';
+  // Rows rendered by fcRenderSendRows() after modal is appended;
+
+  // Inject modal directly into body — hardcoded colors, no CSS variables
+  const div=document.createElement('div');
+  div.id='fcSendModal';
+  div.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;box-sizing:border-box';
+  div.innerHTML=`
+    <div style="background:#ffffff;border-radius:12px;padding:24px;width:100%;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,0.4);position:relative;flex-shrink:0">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px">Review before sending to Production Calculator</div>
+          <div style="font-size:12px;color:#666">Edit any qty, uncheck SKUs to exclude. Only checked SKUs will be sent.</div>
+        </div>
+        <button onclick="fcCloseSendModal()" style="width:auto;padding:4px 12px;font-size:14px;border-radius:6px;cursor:pointer;background:#f3f4f6;border:1px solid #d1d5db;color:#111;flex-shrink:0;margin-left:12px">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:#555">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500">
+          <input type="checkbox" id="fcSendAll" checked onchange="fcToggleAll(this.checked)"> Select all
+        </label>
+        <span style="color:#ccc">|</span>
+        <span id="fcSendCount" style="color:#555">${needRows.length} / ${needRows.length} SKUs selected</span>
+      </div>
+      <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f9fafb">
+              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px">Send</th>
+              <th onclick="fcToggleSendSort('sku')" style="padding:9px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px;cursor:pointer;user-select:none">SKU <span id="sendSortSku" style="font-size:10px;opacity:0.6">↕</span></th>
+              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px">Product name</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px">Avg Daily<br><span style="font-weight:400;font-size:10px;color:#9ca3af">colleague forecast</span></th>
+              <th onclick="fcToggleSendSort('qty')" style="padding:9px 10px;text-align:center;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px;cursor:pointer;user-select:none">Next wk demand <span id="sendSortQty" style="font-size:10px;opacity:0.6">↕</span></th>
+              <th id="sendThOnHand" style="padding:9px 10px;text-align:center;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px;display:none">On-hand</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid #e5e7eb;color:#374151;font-size:12px">Send qty <span style="font-weight:400;color:#9ca3af">(editable)</span></th>
+            </tr>
+          </thead>
+          <tbody id="fcSendBody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button onclick="fcCloseSendModal()" style="width:auto;padding:9px 22px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:14px;color:#111">Cancel</button>
+        <button onclick="fcConfirmSend()" style="width:auto;padding:9px 24px;background:#111;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">⚡ Send to Production Calculator</button>
+      </div>
+    </div>`;
+  div.addEventListener('click',e=>{if(e.target===div)fcCloseSendModal();});
+  document.body.appendChild(div);
+  document.body.style.overflow='hidden';
+  fcRenderSendRows();
+}
+
+function fcCloseSendModal(){
+  const m=document.getElementById('fcSendModal');
+  if(m) m.remove();
+  document.body.style.overflow='';
+}
+
+function fcToggleAll(checked){
+  const modal=document.getElementById('fcSendModal');
+  if(modal) modal.querySelectorAll('.fc-send-chk').forEach(cb=>{cb.checked=checked;});
+  fcUpdateSendCount();
+}
+
+function fcUpdateSendCount(){
+  const modal=document.getElementById('fcSendModal');
+  if(!modal)return;
+  const total=modal.querySelectorAll('.fc-send-chk').length;
+  const checked=modal.querySelectorAll('.fc-send-chk:checked').length;
+  const countEl=document.getElementById('fcSendCount');
+  if(countEl) countEl.textContent=checked+' / '+total+' SKUs selected';
+  const allChk=document.getElementById('fcSendAll');
+  if(allChk){allChk.checked=checked===total;allChk.indeterminate=checked>0&&checked<total;}
+}
+
+function fcConfirmSend(){
+  // Collect checked SKUs + their edited qtys
+  const modal=document.getElementById('fcSendModal');
+  if(!modal)return;
+  const rows=modal.querySelectorAll('.fc-send-chk:checked');
+  if(!rows.length){ alert('No SKUs selected.'); return; }
+
+  // Build tab-separated SKU	Qty pairs for the paste textarea in Tab 1
+  const lines = [];
+  rows.forEach(chk=>{
+    const tr = chk.closest('tr');
+    const sku = tr.querySelector('.fc-send-qty') ? tr.querySelector('.fc-send-qty').getAttribute('data-sku') : chk.getAttribute('data-sku');
+    const qty = parseInt(tr.querySelector('.fc-send-qty').value)||0;
+    if(sku && qty>0) lines.push(sku+'\t'+qty);
+  });
+
+  if(!lines.length){ alert('All quantities are 0 — nothing to send.'); return; }
+
+  // Close modal
+  document.getElementById('fcSendModal').classList.remove('show');
+  document.body.style.overflow='';
+
+  // Switch to Tab 1 and activate paste mode
+  switchTab(0);
+  switchInput(1); // switch to "Paste pivot table" mode
+
+  // Populate the paste textarea
+  const ta = document.getElementById('pasteArea');
+  ta.value = lines.join('\n');
+
+  // Enable and trigger calculate
+  document.getElementById('calcBtn').disabled = false;
+  calculate();
+
+  // Scroll to top of results
+  setTimeout(()=>{
+    const res = document.getElementById('prodResults');
+    if(res) res.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 150);
+}
+
+// ─── TAB 5: GIFT TRACKER ──────────────────────────────────────────────────
+let giftRawData = null; // parsed CSV rows (array of arrays)
+
+document.getElementById('giftFile').addEventListener('change', function(){
+  if(!this.files[0]) return;
+  const file = this.files[0];
+  document.getElementById('giftFileName').textContent = file.name;
+  document.getElementById('giftZone').classList.add('has-file');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    // Parse CSV manually (handles quoted fields)
+    giftRawData = parseCSV(text);
+    document.getElementById('giftBtn').disabled = false;
+  };
+  reader.readAsText(file);
+});
+
+function parseCSV(text){
+  const rows = [];
+  // Split on newlines but respect quoted fields
+  const lines = text.split(/\r?\n/);
+
+
+  for(const line of lines){
+    if(!line.trim()) continue;
+    const cols = [];
+    let inQuote = false, cur = '';
+    for(let i = 0; i < line.length; i++){
+      const ch = line[i];
+      if(ch === '"'){
+        if(inQuote && line[i+1] === '"'){ cur += '"'; i++; }
+        else inQuote = !inQuote;
+      } else if(ch === ',' && !inQuote){
+        cols.push(cur); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    cols.push(cur);
+    rows.push(cols);
+  }
+  return rows;
+}
+
+function runGiftTransform(){
+  if(!giftRawData || giftRawData.length < 2){
+    alert('No data found in CSV.');
+    return;
+  }
+
+  const header = giftRawData[0];
+  const dataRows = giftRawData.slice(1).filter(r => r.some(c => c.trim()));
+
+  // Build new header: cols 0-7 unchanged, then 'Items', 'Quantity', then cols 9+ from original
+  const newHeader = [
+    ...header.slice(0, 8),
+    'Items',
+    'Quantity',
+    ...header.slice(9)
+  ];
+
+  let noQtyCount = 0;
+  const newRows = [];
+
+  for(const row of dataRows){
+    const itemsCell = (row[8] || '').trim();
+    const items = itemsCell ? itemsCell.split(',').map(i => i.trim()).filter(Boolean) : [''];
+
+    for(const item of items){
+      // Match pattern: "CODE xN" or "CODE x N"
+      const m = item.match(/^(.+?)\s+x\s*(\d+)$/i);
+      let itemCode, qty;
+      if(m){
+        itemCode = m[1].trim();
+        qty = parseInt(m[2]);
+      } else {
+        itemCode = item;
+        qty = '';
+        if(item) noQtyCount++;
+      }
+      const newRow = [
+        ...row.slice(0, 8),
+        itemCode,
+        qty,
+        ...row.slice(9)
+      ];
+      newRows.push(newRow);
+    }
+  }
+
+  // Update stats
+  document.getElementById('g-inputrows').textContent = dataRows.length;
+  document.getElementById('g-outputrows').textContent = newRows.length;
+  document.getElementById('g-noparsed').textContent = noQtyCount;
+  document.getElementById('giftResults').style.display = 'block';
+
+  // Preview table (first 20 rows)
+  let html = '<thead><tr>' + newHeader.map(h => `<th>${h||''}</th>`).join('') + '</tr></thead><tbody>';
+  const previewRows = newRows.slice(0, 20);
+  for(const row of previewRows){
+    html += '<tr>' + row.map(c => `<td>${c!=null?c:''}</td>`).join('') + '</tr>';
+  }
+  if(newRows.length > 20) html += `<tr><td colspan="${newHeader.length}" style="text-align:center;color:#999;padding:8px">… and ${newRows.length-20} more rows</td></tr>`;
+  html += '</tbody>';
+  document.getElementById('giftPreviewTable').innerHTML = html;
+
+  // Build Excel using SheetJS
+  const today = new Date();
+  const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const fileName = `Gift_Tracking_${ds}.xlsx`;
+
+  const wsData = [newHeader, ...newRows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Auto column widths
+  const colWidths = newHeader.map((h, ci) => {
+    const maxLen = Math.max(
+      String(h||'').length,
+      ...wsData.slice(1, 51).map(row => String(row[ci]||'').length)
+    );
+    return { wch: Math.min(maxLen + 2, 40) };
+  });
+  ws['!cols'] = colWidths;
+
+  // Autofilter on row 1
+  ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(newHeader.length-1)}1` };
+
+  // Style header row bold
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let C = range.s.c; C <= range.e.c; C++){
+    const ref = XLSX.utils.encode_cell({r:0, c:C});
+    if(ws[ref]){
+      ws[ref].s = { font:{name:'Calibri',sz:11,bold:true}, fill:{patternType:'solid',fgColor:{rgb:'F3F4F6'},bgColor:{indexed:64}} };
+    }
+  }
+  // Style data cells
+  for(let R = 1; R <= range.e.r; R++){
+    for(let C = range.s.c; C <= range.e.c; C++){
+      const ref = XLSX.utils.encode_cell({r:R, c:C});
+      if(ws[ref]) ws[ref].s = { font:{name:'Calibri',sz:11} };
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Gift Tracking');
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array', cellStyles:true});
+  const blob = new Blob([wbout], {type:'application/octet-stream'});
+
+  // Download button
+  const dlBtn = document.getElementById('giftDownloadBtn');
+  dlBtn.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'btn-green';
+  btn.textContent = `⬇️ Download ${fileName}`;
+  btn.onclick = () => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  dlBtn.appendChild(btn);
+}
+// ─── PRODUCTION DONE CHECKBOXES ───────────────────────────────────────────
+function prodMarkDone(chk){
+  const tr = chk.closest('tr');
+  if(!tr) return;
+  if(chk.checked){
+    tr.style.opacity = '0.45';
+    tr.style.textDecoration = 'line-through';
+    tr.style.background = '#f0fdf4';
+    chk.style.accentColor = '#16a34a';
+  } else {
+    tr.style.opacity = '';
+    tr.style.textDecoration = '';
+    tr.style.background = '';
+    chk.style.accentColor = '';
+  }
+}
+
+// Copy SKU to clipboard and auto-tick the row
+function prodCopySku(btn, sku){
+  navigator.clipboard.writeText(sku).then(()=>{
+    // Flash the button to confirm copy
+    btn.textContent = '✓';
+    btn.style.color = '#16a34a';
+    setTimeout(()=>{ btn.textContent = '⧉'; btn.style.color = '#aaa'; }, 1200);
+    // Auto-tick the done checkbox
+    const tr = btn.closest('tr');
+    if(!tr) return;
+    const chk = tr.querySelector('.prod-done-chk');
+    if(chk && !chk.checked){
+      chk.checked = true;
+      prodMarkDone(chk);
+    }
+  }).catch(()=>{
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = sku;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✓';
+    btn.style.color = '#16a34a';
+    setTimeout(()=>{ btn.textContent = '⧉'; btn.style.color = '#aaa'; }, 1200);
+    const tr = btn.closest('tr');
+    if(!tr) return;
+    const chk = tr.querySelector('.prod-done-chk');
+    if(chk && !chk.checked){ chk.checked=true; prodMarkDone(chk); }
+  });
+}
+
+// ─── PRODUCTION HISTORY ───────────────────────────────────────────────────
+const PROD_HISTORY_KEY = 'im8_prod_history';
+const PROD_HISTORY_MAX = 20; // keep last 20 runs
+
+function prodSaveHistory(bundleOrders, allBundles, allComps, subTotal, original, grandTotal, onHand, hasInv){
+  try {
+    const now = new Date();
+    const label = now.toLocaleDateString('en-HK',{year:'numeric',month:'short',day:'numeric'})
+                + ' ' + now.toLocaleTimeString('en-HK',{hour:'2-digit',minute:'2-digit'});
+    // Build snapshot rows
+    const rows = [];
+    for(const sku of [...allBundles].sort()){
+      const qty = bundleOrders[sku]||0;
+      const stock = hasInv?Math.round(onHand[sku]||0):null;
+      const net = hasInv?Math.max(0,qty-stock):null;
+      rows.push({sku, type:'Bundle', ordered:qty, fromBundles:0, grand:qty, stock, net});
+    }
+    for(const c of [...allComps].sort()){
+      const grand = grandTotal[c]||0;
+      const stock = hasInv?Math.round(onHand[c]||0):null;
+      const net = hasInv?Math.max(0,grand-stock):null;
+      rows.push({sku:c, type:(subTotal[c]||0)>0?'Component':'Standalone',
+        ordered:original[c]||0, fromBundles:subTotal[c]||0, grand, stock, net});
+    }
+    const entry = {label, ts: now.getTime(), rows, hasInv};
+    // Load existing, prepend new, trim to max
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(PROD_HISTORY_KEY)||'[]'); } catch(e){}
+    history.unshift(entry);
+    if(history.length > PROD_HISTORY_MAX) history = history.slice(0, PROD_HISTORY_MAX);
+    localStorage.setItem(PROD_HISTORY_KEY, JSON.stringify(history));
+  } catch(e){ console.warn('History save failed:', e); }
+}
+
+function prodShowHistory(){
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(PROD_HISTORY_KEY)||'[]'); } catch(e){}
+  const list = document.getElementById('prodHistoryList');
+  if(!history.length){
+    list.innerHTML = '<div style="text-align:center;color:#999;padding:40px">No history yet — run a production calculation first.</div>';
+  } else {
+    list.innerHTML = history.map((entry,i) => `
+      <div style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;cursor:pointer;user-select:none" onclick="prodHistoryToggle(${i})">
+          <div>
+            <span style="font-weight:600;font-size:13px;color:#111">${entry.label}</span>
+            <span style="margin-left:10px;font-size:12px;color:#888">${entry.rows.length} SKUs${entry.hasInv?' · with inventory':''}</span>
+          </div>
+          <span id="prodHistChevron-${i}" style="font-size:12px;color:#888">▼</span>
+        </div>
+        <div id="prodHistBody-${i}" style="display:none;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:#f0f0f0">
+                <th style="padding:8px 10px;text-align:left;border-bottom:1px solid #e5e7eb">SKU</th>
+                <th style="padding:8px 10px;text-align:left;border-bottom:1px solid #e5e7eb">Type</th>
+                <th style="padding:8px 10px;text-align:center;border-bottom:1px solid #e5e7eb">Ordered</th>
+                <th style="padding:8px 10px;text-align:center;border-bottom:1px solid #e5e7eb">From bundles</th>
+                <th style="padding:8px 10px;text-align:center;border-bottom:1px solid #e5e7eb">Grand total</th>
+                ${entry.hasInv?'<th style="padding:8px 10px;text-align:center;border-bottom:1px solid #e5e7eb">On-hand</th><th style="padding:8px 10px;text-align:center;border-bottom:1px solid #e5e7eb;color:#d97706">Net to produce</th>':''}
+              </tr>
+            </thead>
+            <tbody>
+              ${entry.rows.map(r=>`
+                <tr style="border-bottom:1px solid #f3f4f6">
+                  <td style="padding:7px 10px;font-family:monospace;font-size:11px">${r.sku}</td>
+                  <td style="padding:7px 10px;font-size:11px;color:#666">${r.type}</td>
+                  <td style="padding:7px 10px;text-align:center">${r.ordered}</td>
+                  <td style="padding:7px 10px;text-align:center">${r.fromBundles||'—'}</td>
+                  <td style="padding:7px 10px;text-align:center;font-weight:600">${r.grand}</td>
+                  ${entry.hasInv?`<td style="padding:7px 10px;text-align:center;color:#555">${r.stock}</td><td style="padding:7px 10px;text-align:center;${r.net>0?'color:#d97706;font-weight:700':'color:#16a34a'}">${r.net>0?r.net:'✅ 0'}</td>`:''}
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('prodHistoryModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function prodHistoryToggle(i){
+  const body = document.getElementById('prodHistBody-'+i);
+  const chev = document.getElementById('prodHistChevron-'+i);
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent = open ? '▲' : '▼';
+}
+
+function prodClearHistory(){
+  if(!confirm('Clear all production history? This cannot be undone.')) return;
+  localStorage.removeItem(PROD_HISTORY_KEY);
+  prodShowHistory();
+}
+
+// ─── TAB 6: COURIER SPLITTER ──────────────────────────────────────────────
+const QUARTERLY_SKUS = new Set([
+  'IM8-FG-000236','IM8-FG-000237','IM8-FG-000238','IM8-FG-000239',
+  'IM8-FG-000240','IM8-FG-000241','IM8-FG-000242','IM8-FG-000243'
+]);
+const SF_COUNTRIES    = new Set(['HKG']);
+const GPS_COUNTRIES   = new Set(['MYS','PHL']);
+const FEDEX_COUNTRIES = new Set(['TWN','IDN','JPN','KOR','SGP']);
+const DHL_COUNTRIES   = new Set(['AUS','NZL']);
+
+let courierRawData = null;
+
+document.getElementById('courierFile').addEventListener('change', function(){
+  if(!this.files[0]) return;
+  document.getElementById('courierFileName').textContent = this.files[0].name;
+  document.getElementById('courierZone').classList.add('has-file');
+    // Reset warning banner on new upload
+    const b=document.getElementById('ausCustomsBanner'); if(b) b.style.display='none';
+  readFile(this.files[0], rows => {
+    courierRawData = rows;
+    document.getElementById('courierBtn').disabled = false;
+  });
+});
+
+function assignCourier(shopifyRef, country, totalQty, skus, dupRefs){
+  if(SF_COUNTRIES.has(country))    return 'SF';
+  if(GPS_COUNTRIES.has(country))   return 'GPS';
+  if(FEDEX_COUNTRIES.has(country)) return 'FEDEX';
+  if(DHL_COUNTRIES.has(country)){
+    const isDup       = dupRefs.has(shopifyRef);
+    const hasQuart    = skus.some(s => QUARTERLY_SKUS.has(s));
+    const singleItem  = totalQty === 1;
+    return (!isDup && singleItem && !hasQuart) ? 'DHL' : 'FEDEX';
+  }
+  return 'FEDEX'; // default unknown country
+}
+
+function runCourierSplit(){
+  if(!courierRawData || courierRawData.length < 2){ alert('No data found.'); return; }
+  try {
+  const hdr = courierRawData[0];
+  const refCol  = findCol(hdr,['shopifyreference','shopify reference','shopify ref','reference']);
+  const soCol   = findCol(hdr,['salesorder','sales order']);
+  const skuCol  = findCol(hdr,['itemnumber','item number','itemnum','sku']);
+  const nameCol = findCol(hdr,['productname','product name','name','description']);
+  const ctyCol  = findCol(hdr,['country/region','country','region','countryregion']);
+  const delCol  = findCol(hdr,['deliveremainder','deliver remainder','deliver']);
+  const qtyCol  = findCol(hdr,['quantity','qty']);
+  const amtCol  = findCol(hdr,['netamount','net amount','amount','sales']);
+  const dtCol   = findCol(hdr,['createddatetime','created date and time','created date','date']);
+  const stCol   = findCol(hdr,['status']);
+
+  if(!refCol||!skuCol||!ctyCol||!qtyCol){
+    alert('Cannot find required columns. Found: '+Object.keys(hdr).join(', '));
+    return;
+  }
+
+  const stColFound = findCol(hdr,['status']);
+  // readFile uses sheet_to_json — all rows are data rows (no header row to skip)
+  const dataRows = courierRawData.filter(r=>r[refCol]);
+  const activeRows = dataRows.filter(r=>{
+    if(!stColFound) return true;
+    const st=String(r[stColFound]||'').trim().toLowerCase();
+    return !st.includes('cancel')&&!st.includes('void')&&!st.includes('return')&&!st.includes('refund');
+  });
+
+  // Group by Shopify reference (use activeRows to exclude cancelled)
+  const orderMap={};
+  for(const r of activeRows){
+    const ref=String(r[refCol]||'').trim();
+    const qty=parseInt(r[qtyCol])||0;
+    const sku=String(r[skuCol]||'').trim();
+    const cty=String(r[ctyCol]||'').trim();
+    if(!ref) continue;
+    if(!orderMap[ref]) orderMap[ref]={country:cty,totalQty:0,skus:[],rows:[]};
+    orderMap[ref].totalQty+=qty;
+    orderMap[ref].skus.push(sku);
+    orderMap[ref].rows.push(r);
+  }
+  const dupRefs=new Set(Object.entries(orderMap).filter(([,v])=>v.rows.length>1).map(([k])=>k));
+
+  const orderCourier={};
+  for(const [ref,ord] of Object.entries(orderMap)){
+    orderCourier[ref]=assignCourierFromRules(ref,ord.country,ord.totalQty,ord.skus,ord.rows.length,dupRefs);
+  }
+
+  // Save to history
+  courierSaveHistory(orderMap);
+
+  // taggedRows uses activeRows for pivot accuracy; dataRows used for raw sheet output
+  const taggedRows=activeRows.map(r=>({...r,_courier:orderCourier[String(r[refCol]||'').trim()]||'FEDEX'}));
+
+  // ── AUS customs compliance check ──────────────────────────────────────
+  const customsViolations = runAusCustomsCheck(taggedRows, orderMap, refCol, skuCol, qtyCol, ctyCol);
+  if(customsViolations.length > 0){
+    // Show warning after a short delay so the main UI updates first
+    setTimeout(()=>showAusCustomsWarning(customsViolations), 300);
+  }
+
+  // RAW columns in order
+  const RAW_COLS=[refCol,soCol,skuCol,nameCol,ctyCol,delCol,qtyCol,amtCol,dtCol,stCol].filter(Boolean);
+  const GPS_COLS=[refCol,soCol,skuCol,nameCol,ctyCol,delCol,qtyCol,amtCol].filter(Boolean);
+  const SF_COLS =[refCol,soCol,skuCol,nameCol,ctyCol,delCol,qtyCol,amtCol,dtCol].filter(Boolean);
+
+  // Build pivot maps: sumMap[sku][courier]=qty, cntMap[sku][courier]=lines
+  const sumMap={}, cntMap={};
+  for(const r of taggedRows){
+    const sku=String(r[skuCol]||'').trim();
+    const qty=parseInt(r[qtyCol])||0;
+    const courier=r._courier;
+    const cty=String(r[ctyCol]||'').trim();
+    if(!sumMap[sku]) sumMap[sku]={};
+    if(!cntMap[sku]) cntMap[sku]={};
+    sumMap[sku][courier]=(sumMap[sku][courier]||0)+qty;
+    // For count: exclude TWN from FEDEX count (for FEDEX NO TW and NEW)
+    const cntCourier=(courier==='FEDEX'&&cty==='TWN')?'FEDEX_TW':courier;
+    if(!cntMap[sku][cntCourier]) cntMap[sku][cntCourier]=0;
+    cntMap[sku][cntCourier]++;
+    // Also track regular count for DHL/SF
+    if(!cntMap[sku][courier]) cntMap[sku][courier]=0;
+    cntMap[sku][courier]++;
+  }
+
+  const allSkus=[...new Set(taggedRows.map(r=>String(r[skuCol]||'').trim()))].sort();
+
+  // Stats
+  const courierCounts={};
+  for(const c of Object.values(orderCourier)) courierCounts[c]=(courierCounts[c]||0)+1;
+  document.getElementById('cr-total').textContent=Object.keys(orderMap).length;
+  document.getElementById('cr-fedex').textContent=courierCounts['FEDEX']||0;
+  document.getElementById('cr-dhl').textContent=courierCounts['DHL']||0;
+  document.getElementById('cr-sf').textContent=courierCounts['SF']||0;
+  document.getElementById('cr-gps').textContent=courierCounts['GPS']||0;
+
+  // Country breakdown
+  const ctyCount={};
+  for(const [,ord] of Object.entries(orderMap)) ctyCount[ord.country]=(ctyCount[ord.country]||0)+1;
+  const ctyEl=document.getElementById('cr-country-breakdown');
+  if(ctyEl){
+    const sorted=Object.entries(ctyCount).sort((a,b)=>b[1]-a[1]);
+    ctyEl.innerHTML=sorted.map(([c,n])=>`<span style="display:inline-block;margin:3px 4px;padding:3px 10px;background:#f3f4f6;border-radius:12px;font-size:12px;color:#374151"><strong>${c}</strong> ${n}</span>`).join('');
+  }
+
+  // Preview table
+  const COURIERS=['FEDEX','DHL','SF','GPS'];
+  let html='<thead><tr><th>SKU</th>'+COURIERS.map(c=>`<th>${c}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
+  for(const sku of allSkus){
+    const vals=COURIERS.map(c=>sumMap[sku]?.[c]||0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    if(tot===0) continue;
+    html+=`<tr><td style="font-family:monospace;font-size:11px">${sku}</td>${vals.map(v=>`<td style="text-align:center">${v||'—'}</td>`).join('')}<td style="text-align:center;font-weight:700">${tot}</td></tr>`;
+  }
+  const grandVals=COURIERS.map(c=>allSkus.reduce((s,sku)=>s+(sumMap[sku]?.[c]||0),0));
+  html+=`<tr style="background:#f0f0f0;font-weight:700"><td>Grand Total</td>${grandVals.map(v=>`<td style="text-align:center">${v}</td>`).join('')}<td style="text-align:center">${grandVals.reduce((a,b)=>a+b,0)}</td></tr></tbody>`;
+  document.getElementById('courierPreviewTable').innerHTML=html;
+  document.getElementById('courierResults').style.display='block';
+
+  // ── Build Excel ──────────────────────────────────────────────────────────
+  const today=new Date();
+  const ds=`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const fileName=`Order_lines_${ds}.xlsx`;
+  const wb=XLSX.utils.book_new();
+
+  // Helper: pivot series for a courier
+  function getSumSeries(courier){ return allSkus.filter(s=>(sumMap[s]?.[courier]||0)>0).map(s=>[s,sumMap[s][courier]]); }
+  function getCntSeries(courier,noTW){ return allSkus.filter(s=>{const k=noTW&&courier==='FEDEX'?'FEDEX':courier; return (cntMap[s]?.[noTW?courier+'_noTW':courier]||(!noTW&&(cntMap[s]?.[courier]||0)))>0;}).map(s=>[s,noTW?(cntMap[s]?.[courier]||0)-(cntMap[s]?.['FEDEX_TW']||0):cntMap[s]?.[courier]||0]).filter(r=>r[1]>0); }
+
+  // Simpler: build count series directly
+  function buildCnt(rows, courier){
+    const m={};
+    for(const r of rows){ const s=String(r[skuCol]||'').trim(); m[s]=(m[s]||0)+1; }
+    return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0])).filter(r=>r[1]>0);
+  }
+
+  const fedexRows    = taggedRows.filter(r=>r._courier==='FEDEX');
+  const fedexNoTWRows= fedexRows.filter(r=>String(r[ctyCol]||'').trim()!=='TWN');
+  const dhlRows      = taggedRows.filter(r=>r._courier==='DHL');
+  const gpsRows      = taggedRows.filter(r=>r._courier==='GPS');
+  const sfRows       = taggedRows.filter(r=>r._courier==='SF');
+
+  // Pivot styles matching screenshot — outer border only, clean rows
+  const T={style:'thin',color:{rgb:'BFBFBF'}}, N={style:'thin',color:{rgb:'FFFFFF'}};
+  const MB={style:'medium',color:{rgb:'595959'}}, MT={style:'medium',color:{rgb:'595959'}};
+  // (THIN kept as alias for backwards compat)
+  const THIN={style:'thin',color:{rgb:'BFBFBF'}};
+  const PIVOT_HDR_STYLE={font:{bold:true,color:{rgb:'FFFFFF'},name:'Calibri',sz:11},fill:{patternType:'solid',fgColor:{rgb:'4472C4'}},border:{top:T,bottom:T,left:T,right:T},alignment:{horizontal:'left'}};
+  const PIVOT_LABEL_STYLE={font:{bold:true,name:'Calibri',sz:11},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},border:{top:MT,bottom:T,left:T,right:T},alignment:{horizontal:'left'}};
+  const PIVOT_LABEL_NUM_STYLE={font:{bold:true,name:'Calibri',sz:11},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},border:{top:MT,bottom:T,left:N,right:T},alignment:{horizontal:'right'}};
+  const PIVOT_DATA_STYLE={font:{name:'Calibri',sz:11},border:{top:N,bottom:N,left:T,right:N},alignment:{horizontal:'left'}};
+  const PIVOT_DATA_NUM_STYLE={font:{name:'Calibri',sz:11},border:{top:N,bottom:N,left:N,right:T},alignment:{horizontal:'right'}};
+  const PIVOT_GRAND_STYLE={font:{bold:true,name:'Calibri',sz:11},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},border:{top:MT,bottom:MB,left:T,right:N},alignment:{horizontal:'left'}};
+  const PIVOT_GRAND_NUM_STYLE={font:{bold:true,name:'Calibri',sz:11},fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},border:{top:MT,bottom:MB,left:N,right:T},alignment:{horizontal:'right'}};
+
+  function applyStyle(ws, r, c, style){
+    const addr = XLSX.utils.encode_cell({r,c});
+    if(!ws[addr]) ws[addr] = {t:'z', v:''};
+    ws[addr].s = style;
+  }
+
+  // ── write pivot at cell offset (0-indexed row/col) ──
+  // label = courier name shown above headers (e.g. 'FEDEX')
+  // if label is null, skip the label row (for Sheet1 All pivot)
+  function writePivot(ws, seriesArr, label, colLabel, startRow, startCol){
+    let dataStartRow = startRow;
+    if(label !== null){
+      // Courier name row (blue header spanning 2 cols)
+      XLSX.utils.sheet_add_aoa(ws,[[label,'']],{origin:{r:startRow,c:startCol}});
+      applyStyle(ws, startRow, startCol,   PIVOT_HDR_STYLE);
+      applyStyle(ws, startRow, startCol+1, PIVOT_HDR_STYLE);
+      dataStartRow = startRow + 1;
+    }
+    // Column headers
+    XLSX.utils.sheet_add_aoa(ws,[['Row Labels', colLabel]],{origin:{r:dataStartRow,c:startCol}});
+    applyStyle(ws, dataStartRow, startCol,   PIVOT_LABEL_STYLE);
+    applyStyle(ws, dataStartRow, startCol+1, PIVOT_LABEL_NUM_STYLE);
+    // Data rows
+    let r = dataStartRow + 1;
+    for(const [sku,val] of seriesArr){
+      XLSX.utils.sheet_add_aoa(ws,[[sku,val]],{origin:{r,c:startCol}});
+      applyStyle(ws, r, startCol,   PIVOT_DATA_STYLE);
+      applyStyle(ws, r, startCol+1, PIVOT_DATA_NUM_STYLE);
+      r++;
+    }
+    // Grand total
+    const grand=seriesArr.reduce((s,[,v])=>s+v,0);
+    XLSX.utils.sheet_add_aoa(ws,[['Grand Total',grand]],{origin:{r,c:startCol}});
+    applyStyle(ws, r, startCol,   PIVOT_GRAND_STYLE);
+    applyStyle(ws, r, startCol+1, PIVOT_GRAND_NUM_STYLE);
+    return r;
+  }
+
+  // ── write raw rows ──
+  function writeRaw(cols, rows){
+    const data=[cols, ...rows.map(r=>cols.map(c=>{ const v=r[c]; return (v===undefined||v===null)?'':v; }))];
+    return XLSX.utils.aoa_to_sheet(data);
+  }
+
+  // ── Sheet1 ──
+  const ws1=XLSX.utils.aoa_to_sheet([[null,null,parseInt(ds)]]);
+  // All sum col A/B row 2 (0-indexed) - no courier label row for All pivot
+  const allSum=allSkus.map(s=>[s,COURIERS.reduce((t,c)=>t+(sumMap[s]?.[c]||0),0)]).filter(r=>r[1]>0);
+  writePivot(ws1,allSum,null,'Sum of Quantity',2,0);
+  // FEDEX col D/E (col 3) - label included in writePivot
+  const fedSum=getSumSeries('FEDEX');
+  let lastFed=writePivot(ws1,fedSum,'FEDEX','Sum of Quantity',2,3);
+  // SF col G/H (col 6)
+  const sfSum=getSumSeries('SF');
+  let lastSF=writePivot(ws1,sfSum,'SF','Sum of Quantity',2,6);
+  // DHL below FEDEX (2 blank gap)
+  const dhlSum=getSumSeries('DHL');
+  const dhlStart=lastFed+3;
+  writePivot(ws1,dhlSum,'DHL','Sum of Quantity',dhlStart,3);
+  // GPS below SF
+  const gpsSum=getSumSeries('GPS');
+  const gpsStart=lastSF+3;
+  writePivot(ws1,gpsSum,'GPS','Sum of Quantity',gpsStart,6);
+  ws1['!cols']=[{wch:18},{wch:16},{wch:8},{wch:18},{wch:16},{wch:4},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Sheet1');
+
+  // ── all sheet ──
+  const allCols=Object.keys(courierRawData[0]);
+  const wsAll=writeRaw(allCols,dataRows);
+  XLSX.utils.book_append_sheet(wb,wsAll,'all');
+
+  // ── FEDEX sheet: raw cols A-J + sum pivot col L (11) ──
+  const wsFedex=writeRaw(RAW_COLS,fedexRows);
+  writePivot(wsFedex,fedSum,null,'Sum of Quantity',0,11);
+  wsFedex['!cols']=[{wch:18},{wch:18},{wch:18},{wch:50},{wch:14},{wch:14},{wch:10},{wch:12},{wch:22},{wch:12},{wch:3},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsFedex,'FEDEX');
+
+  // ── FEDEX NO TW sheet: raw + count pivot col L ──
+  const wsFNT=writeRaw(RAW_COLS,fedexNoTWRows);
+  const fntCnt=buildCnt(fedexNoTWRows,'FEDEX');
+  writePivot(wsFNT,fntCnt,null,'Count of Item number',0,11);
+  wsFNT['!cols']=[{wch:18},{wch:18},{wch:18},{wch:50},{wch:14},{wch:14},{wch:10},{wch:12},{wch:22},{wch:12},{wch:3},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsFNT,'FEDEX NO TW');
+
+  // ── DHL sheet: raw + sum pivot col L + count pivot col O ──
+  const wsDHL=writeRaw(RAW_COLS,dhlRows);
+  const dhlCnt=buildCnt(dhlRows,'DHL');
+  writePivot(wsDHL,dhlSum,null,'Sum of Quantity',0,11);
+  writePivot(wsDHL,dhlCnt,null,'Count of Item number',0,14);
+  wsDHL['!cols']=[{wch:18},{wch:18},{wch:18},{wch:50},{wch:14},{wch:14},{wch:10},{wch:12},{wch:22},{wch:12},{wch:3},{wch:18},{wch:16},{wch:3},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsDHL,'DHL');
+
+  // ── GPS sheet: 8 raw cols + sum pivot col J ──
+  const GPS_C=[refCol,soCol,skuCol,nameCol,ctyCol,delCol,qtyCol,amtCol].filter(Boolean);
+  const wsGPS=writeRaw(GPS_C,gpsRows);
+  writePivot(wsGPS,gpsSum,null,'Sum of Quantity',0,9);
+  wsGPS['!cols']=[{wch:18},{wch:18},{wch:18},{wch:50},{wch:14},{wch:14},{wch:10},{wch:12},{wch:3},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsGPS,'GPS');
+
+  // ── SF sheet: 9 raw cols + sum pivot col K + count pivot col N ──
+  const SF_C=[refCol,soCol,skuCol,nameCol,ctyCol,delCol,qtyCol,amtCol,dtCol].filter(Boolean);
+  const wsSF=writeRaw(SF_C,sfRows);
+  const sfCnt=buildCnt(sfRows,'SF');
+  writePivot(wsSF,sfSum,null,'Sum of Quantity',0,10);
+  writePivot(wsSF,sfCnt,null,'Count of Item number',0,13);
+  wsSF['!cols']=[{wch:18},{wch:18},{wch:18},{wch:50},{wch:14},{wch:14},{wch:10},{wch:12},{wch:22},{wch:3},{wch:18},{wch:16},{wch:3},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsSF,'SF');
+
+  // ── NEW sheet: FEDEX(noTW) cnt col A + DHL cnt col D + SF cnt col D below DHL ──
+  const wsNew=XLSX.utils.aoa_to_sheet([[]]);
+  const lastFedNew=writePivot(wsNew,fntCnt,'FEDEX','Count of Item number',1,0);
+  const lastDhlNew=writePivot(wsNew,dhlCnt,'DHL','Count of Item number',1,3);
+  const sfStartNew=lastDhlNew+3;
+  writePivot(wsNew,sfCnt,'SF','Count of Item number',sfStartNew,3);
+
+  // ── AUS Customs violations — below FEDEX pivot (col A/B) ──
+  if(customsViolations && customsViolations.length > 0){
+    const cvsStart = lastFedNew + 3; // 2 blank rows gap below FEDEX grand total
+    // Amber header
+    const WARN_HDR = {font:{bold:true,color:{rgb:'92400E'},name:'Calibri',sz:11},
+      fill:{patternType:'solid',fgColor:{rgb:'FEF3C7'}},
+      border:{top:T,bottom:T,left:T,right:T},alignment:{horizontal:'left'}};
+    const WARN_ROW = {font:{name:'Calibri',sz:10,color:{rgb:'78350F'}},
+      border:{top:T,bottom:T,left:T,right:T},alignment:{horizontal:'left',wrapText:true}};
+    const WARN_REF = {font:{name:'Calibri',sz:10,bold:true,color:{rgb:'92400E'}},
+      border:{top:T,bottom:T,left:T,right:T},alignment:{horizontal:'left'}};
+
+    XLSX.utils.sheet_add_aoa(wsNew,[['⚠ AUS Customs — Exceeds 3-month supply','']],{origin:{r:cvsStart,c:0}});
+    applyStyle(wsNew,cvsStart,0,WARN_HDR); applyStyle(wsNew,cvsStart,1,WARN_HDR);
+    XLSX.utils.sheet_add_aoa(wsNew,[['Shopify ref','Issue']],{origin:{r:cvsStart+1,c:0}});
+    applyStyle(wsNew,cvsStart+1,0,{...WARN_HDR,font:{bold:true,name:'Calibri',sz:10,color:{rgb:'92400E'}}});
+    applyStyle(wsNew,cvsStart+1,1,{...WARN_HDR,font:{bold:true,name:'Calibri',sz:10,color:{rgb:'92400E'}}});
+
+    customsViolations.forEach((v,i)=>{
+      const r = cvsStart+2+i;
+      const issueStr = v.violations.map(viol=>`${viol.category}: ${viol.involved} (${viol.total}>${viol.max})`).join('; ');
+      XLSX.utils.sheet_add_aoa(wsNew,[[v.ref, issueStr]],{origin:{r,c:0}});
+      applyStyle(wsNew,r,0,WARN_REF);
+      applyStyle(wsNew,r,1,WARN_ROW);
+    });
+    // Set row heights for wrapped text
+    if(!wsNew['!rows']) wsNew['!rows']=[];
+    customsViolations.forEach((_,i)=>{ wsNew['!rows'][cvsStart+2+i]={hpt:30}; });
+  }
+
+  // ── Checklist — top right corner (col G, row 1) ──
+  const CHK_COL=6; // col G (0-indexed)
+  const CHK_HDR_STYLE={
+    font:{bold:true,color:{rgb:'FFFFFF'},name:'Calibri',sz:11},
+    fill:{patternType:'solid',fgColor:{rgb:'4472C4'}},
+    border:{top:T,bottom:T,left:T,right:T},
+    alignment:{horizontal:'left'}
+  };
+  const CHK_ROW_STYLE={
+    font:{name:'Calibri',sz:11},
+    border:{top:T,bottom:T,left:T,right:T},
+    alignment:{horizontal:'left'}
+  };
+  const CHK_BOX_STYLE={
+    font:{name:'Calibri',sz:12},
+    border:{top:T,bottom:T,left:T,right:T},
+    alignment:{horizontal:'center',vertical:'center'}
+  };
+  const CHK_GRAND_STYLE={
+    font:{bold:true,name:'Calibri',sz:11},
+    fill:{patternType:'solid',fgColor:{rgb:'F2F2F2'}},
+    border:{top:MT,bottom:MB,left:T,right:T},
+    alignment:{horizontal:'left'}
+  };
+
+  // Header row
+  XLSX.utils.sheet_add_aoa(wsNew,[['Daily dispatch checklist','']],{origin:{r:0,c:CHK_COL}});
+  applyStyle(wsNew,0,CHK_COL,  CHK_HDR_STYLE);
+  applyStyle(wsNew,0,CHK_COL+1,CHK_HDR_STYLE);
+
+  // Three checklist items
+  const chkItems=['WTS GPS','DHL pickup','TW orders'];
+  chkItems.forEach((label,i)=>{
+    const r=i+1;
+    XLSX.utils.sheet_add_aoa(wsNew,[['☐',label]],{origin:{r,c:CHK_COL}});
+    applyStyle(wsNew,r,CHK_COL,  CHK_BOX_STYLE);
+    applyStyle(wsNew,r,CHK_COL+1,CHK_ROW_STYLE);
+  });
+
+  // Column widths for checklist columns
+  wsNew['!cols']=[{wch:18},{wch:20},{wch:3},{wch:18},{wch:20},{wch:3},{wch:5},{wch:20}];
+  // Row heights — make checklist rows a bit taller
+  wsNew['!rows']=[{hpt:18},{hpt:22},{hpt:22},{hpt:22}];
+
+  XLSX.utils.book_append_sheet(wb,wsNew,'NEW');
+
+  // ── Download ──
+  const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});
+  const blob=new Blob([wbout],{type:'application/octet-stream'});
+  const dlBtn=document.getElementById('courierDownloadBtn');
+  dlBtn.innerHTML='';
+  const btn=document.createElement('button');
+  btn.className='btn-green';
+  btn.textContent=`⬇️ Download ${fileName}`;
+  btn.onclick=()=>{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  dlBtn.appendChild(btn);
+  } catch(err){
+    console.error('Courier Excel error:',err);
+    alert('Error: '+err.message);
+  }
+}
+
+// ─── TAB 6: COURIER RULE EDITOR ───────────────────────────────────────────
+const DEFAULT_RULES = [
+  {country:'HKG', courier:'SF',    dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'MYS', courier:'GPS',   dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'PHL', courier:'GPS',   dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'TWN', courier:'FEDEX', dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'SGP', courier:'FEDEX', dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'JPN', courier:'FEDEX', dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'KOR', courier:'FEDEX', dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'IDN', courier:'FEDEX', dhl:{singleSku:false, qty1:false, noQuarterly:false, singleLine:false}},
+  {country:'AUS', courier:'FEDEX', dhl:{singleSku:true,  qty1:true,  noQuarterly:true,  singleLine:false}},
+  {country:'NZL', courier:'FEDEX', dhl:{singleSku:true,  qty1:true,  noQuarterly:true,  singleLine:false}},
+];
+
+let courierRules = JSON.parse(JSON.stringify(DEFAULT_RULES));
+
+const COURIERS_LIST = ['SF','GPS','FEDEX','DHL'];
+
+function courierRenderRules(){
+  const tbody = document.getElementById('courierRuleBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  courierRules.forEach((rule, i) => {
+    const hasDHL = rule.courier !== 'DHL'; // only show DHL conditions if default is not already DHL
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f3f4f6';
+    tr.innerHTML = `
+      <td style="padding:8px 12px">
+        <input value="${rule.country}" onchange="courierRules[${i}].country=this.value.toUpperCase().trim()"
+          style="width:70px;padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-weight:600;text-transform:uppercase;text-align:center">
+      </td>
+      <td style="padding:8px 12px">
+        <select onchange="courierRules[${i}].courier=this.value;courierRenderRules()"
+          style="padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;background:#fff;color:${rule.courier==='SF'?'#7c3aed':rule.courier==='GPS'?'#d97706':rule.courier==='DHL'?'#2563eb':'#dc2626'}">
+          ${COURIERS_LIST.map(c=>`<option value="${c}" ${c===rule.courier?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td style="padding:8px 12px">
+        ${hasDHL ? `
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#374151">
+            <input type="checkbox" ${rule.dhl.singleSku?'checked':''} onchange="courierRules[${i}].dhl.singleSku=this.checked">
+            Single SKU
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#374151">
+            <input type="checkbox" ${rule.dhl.qty1?'checked':''} onchange="courierRules[${i}].dhl.qty1=this.checked">
+            Total qty = 1
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#374151">
+            <input type="checkbox" ${rule.dhl.singleLine?'checked':''} onchange="courierRules[${i}].dhl.singleLine=this.checked">
+            Not a duplicate order
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#374151">
+            <input type="checkbox" ${rule.dhl.noQuarterly?'checked':''} onchange="courierRules[${i}].dhl.noQuarterly=this.checked">
+            Not quarterly subscription
+          </label>
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:#9ca3af">${courierDhlSummary(rule)}</div>
+        ` : '<span style="font-size:11px;color:#9ca3af">—</span>'}
+      </td>
+      <td style="padding:8px 12px;text-align:center">
+        <button onclick="courierRules.splice(${i},1);courierRenderRules()" 
+          style="padding:2px 8px;font-size:11px;border-radius:4px;cursor:pointer;background:#fff5f5;border:1px solid #fca5a5;color:#dc2626">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function courierDhlSummary(rule){
+  const conds = [];
+  if(rule.dhl.singleSku)    conds.push('single SKU');
+  if(rule.dhl.qty1)         conds.push('qty=1');
+  if(rule.dhl.singleLine)   conds.push('1 order line');
+  if(rule.dhl.noQuarterly)  conds.push('no quarterly SKU');
+  if(!conds.length) return '';
+  return `→ DHL if: ${conds.join(' + ')}`;
+}
+
+function courierAddRow(){
+  courierRules.push({country:'', courier:'FEDEX', dhl:{singleSku:false,qty1:false,noQuarterly:false,singleLine:false}});
+  courierRenderRules();
+  // Focus the new country input
+  const inputs = document.getElementById('courierRuleBody').querySelectorAll('input[type=text],input:not([type])');
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+
+// Init rules on page load
+document.addEventListener('DOMContentLoaded', courierRenderRules);
+
+// Override assignCourier to use rule table instead of hardcoded logic
+function assignCourierFromRules(shopifyRef, country, totalQty, skus, lineCount, dupRefs){
+  const rule = courierRules.find(r => r.country.toUpperCase() === country.toUpperCase());
+  if(!rule) return 'FEDEX'; // unknown country → FEDEX default
+
+  const defaultCourier = rule.courier;
+  const dhl = rule.dhl;
+
+  // Check if any DHL condition is ticked
+  const anyDhlTicked = dhl.singleSku || dhl.qty1 || dhl.singleLine || dhl.noQuarterly;
+  if(!anyDhlTicked) return defaultCourier;
+
+  // All ticked conditions must be satisfied
+  const isDup = dupRefs.has(shopifyRef);
+  const hasQuarterly = skus.some(s => QUARTERLY_SKUS.has(s));
+
+  let qualifies = true;
+  if(dhl.singleSku   && skus.length !== 1)   qualifies = false;
+  if(dhl.qty1        && totalQty !== 1)       qualifies = false;
+  if(dhl.singleLine  && lineCount !== 1)      qualifies = false;
+  if(dhl.noQuarterly && hasQuarterly)         qualifies = false;
+
+  return qualifies ? 'DHL' : defaultCourier;
+}
+
+// ─── TAB 6: AUS CUSTOMS COMPLIANCE CHECK ─────────────────────────────────
+//
+// Rules (name-based, applied in priority order):
+// 1. Contains "Quarterly Subscription" → QUARTERLY, max=1 per order (already 3 months)
+// 2. Contains "Refill" (and not Quarterly) → check BOM components
+// 3. Contains "Essentials Starter" or "Beckham Stack Starter" → KIT, max=3
+// 4. Pure components (187,188,196,200,035,053,124) → count directly
+// 5. Frother, hat, cup, 7ct boxes → EXEMPT
+
+// QUARTERLY SKUs (product name contains "Quarterly Subscription") — max 1 per order
+const AUS_QUARTERLY = new Set([
+  'IM8-FG-000159','IM8-FG-000160','IM8-FG-000161','IM8-FG-000162','IM8-FG-000163',
+  'IM8-FG-000164','IM8-FG-000165','IM8-FG-000166','IM8-FG-000167','IM8-FG-000168',
+  'IM8-FG-000224','IM8-FG-000225','IM8-FG-000227','IM8-FG-000228','IM8-FG-000230',
+  'IM8-FG-000231','IM8-FG-000233','IM8-FG-000234',
+  'IM8-FG-000236','IM8-FG-000237','IM8-FG-000238','IM8-FG-000239',
+  'IM8-FG-000240','IM8-FG-000241','IM8-FG-000242','IM8-FG-000243',
+]);
+
+// STARTER KIT SKUs ("Essentials Starter" or "Beckham Stack Starter" in name) — max 3, not exploded
+const AUS_KITS = new Set([
+  'IM8-FG-000011', // full kit
+  'IM8-FG-000203','IM8-FG-000204','IM8-FG-000205','IM8-FG-000206',
+  'IM8-FG-000207','IM8-FG-000208','IM8-FG-000209','IM8-FG-000210',
+  'IM8-FG-000211','IM8-FG-000212','IM8-FG-000213','IM8-FG-000214',
+  'IM8-FG-000215','IM8-FG-000216','IM8-FG-000217','IM8-FG-000218',
+]);
+
+// 7-DAY SKUs — too small to flag alone, but flag if order already has ≥3 months
+const AUS_7DAY = new Set([
+  'IM8-FG-000149', // Essentials Travel Box Set (7ct) Acai
+  'IM8-FG-000185', // Essentials Travel Box Set (7ct) Orange Lemon
+  'IM8-FG-000186', // Essentials Travel Box Set (7ct) Mango Passionfruit
+  'IM8-FG-000198', // Essentials Travel Box Set (7ct) Variety
+]);
+
+// EXEMPT — completely ignored (frother, hat, cup, accessories)
+const AUS_EXEMPT = new Set([
+  'IM8-FG-000143','IM8-FG-000145','IM8-FG-000146',
+]);
+
+// COMPONENT limits after BOM explosion (each 30ct = 1 month)
+// Monthly equivalent per SKU type:
+//   Quarterly SKU    = 3 months each
+//   Starter kit SKU  = 1 month each
+//   Essentials 30ct  = 1 month each
+//   Longevity 30ct   = 1 month each
+// Combined monthly total across ALL categories must be ≤ 3
+
+// Individual limits (still checked separately to catch edge cases)
+const AUS_LIMITS = {
+  ESSENTIALS: {
+    skus: new Set(['IM8-FG-000187','IM8-FG-000188','IM8-FG-000196','IM8-FG-000200',
+                   'IM8-FG-000035','IM8-FG-000053']),
+    label: 'Essentials (30ct)', max: 3, monthsEach: 1
+  },
+  LONGEVITY: {
+    skus: new Set(['IM8-FG-000124']),
+    label: 'Longevity (30ct)', max: 3, monthsEach: 1
+  },
+  QUARTERLY_SKU: {
+    skus: AUS_QUARTERLY,
+    label: 'Quarterly Subscription SKU', max: 1, monthsEach: 3
+  },
+  KITS_CAT: {
+    skus: AUS_KITS,
+    label: 'Starter kits', max: 3, monthsEach: 1
+  }
+};
+
+// Combined month limit across all categories
+const AUS_COMBINED_MAX = 3;
+
+// Explode a SKU to its countable components
+// Priority: exempt → quarterly (count as-is) → kit (count as-is) → refill/other (BOM)
+function explodeSku(sku, qty, depth=0){
+  if(depth > 5) return {};
+  // Resolve OTP aliases first (e.g. 000208 → 000214)
+  const canonical = canonicalSku(sku);
+  if(AUS_EXEMPT.has(canonical))    return {};           // ignore completely
+  if(AUS_7DAY.has(canonical))       return {[canonical]: qty}; // 7-day: flag only if combined ≥3mo
+  if(AUS_QUARTERLY.has(canonical)) return {[canonical]: qty}; // quarterly: count whole unit
+  if(AUS_KITS.has(canonical))      return {[canonical]: qty}; // kit: count whole unit, no BOM
+  const components = SKU_MATRIX[canonical] || SKU_MATRIX[sku];
+  if(!components) return {[canonical]: qty};            // leaf component ordered directly
+  // Has BOM — explode (refill SKUs, bundles etc)
+  const result = {};
+  for(const c of components){
+    const sub = explodeSku(c.s, c.q * qty, depth+1);
+    for(const [s,q] of Object.entries(sub)){
+      result[s] = (result[s]||0) + q;
+    }
+  }
+  return result;
+}
+
+// Run customs check for all AUS orders, return array of violations
+function runAusCustomsCheck(taggedRows, orderMap, refCol, skuCol, qtyCol, ctyCol){
+  const violations = [];
+
+  for(const [ref, ord] of Object.entries(orderMap)){
+    if(ord.country !== 'AUS') continue;
+
+    // Explode all SKUs in this order to countable components
+    const totalComponents = {};
+    for(const row of ord.rows){
+      const sku = String(row[skuCol]||'').trim();
+      const qty = parseInt(row[qtyCol])||0;
+      if(!sku || qty<=0) continue;
+      const exploded = explodeSku(sku, qty);
+      for(const [comp, compQty] of Object.entries(exploded)){
+        totalComponents[comp] = (totalComponents[comp]||0) + compQty;
+      }
+    }
+
+    // Check each individual limit category
+    const orderViolations = [];
+    let combinedMonths = 0;
+    const combinedInvolved = [];
+
+    for(const [catKey, cat] of Object.entries(AUS_LIMITS)){
+      let total = 0;
+      const involved = [];
+      for(const [comp, compQty] of Object.entries(totalComponents)){
+        if(cat.skus.has(comp)){
+          total += compQty;
+          involved.push(`${comp.replace('IM8-FG-','')}×${compQty}`);
+        }
+      }
+      // Individual category check
+      if(total > cat.max){
+        orderViolations.push({
+          category: cat.label,
+          total,
+          max: cat.max,
+          involved: involved.join(' + ')
+        });
+      }
+      // Accumulate combined monthly total
+      if(total > 0){
+        const months = total * cat.monthsEach;
+        combinedMonths += months;
+        combinedInvolved.push(`${involved.join('+')} (${months} month${months>1?'s':''})`);
+      }
+    }
+
+    // Combined check: kits + quarterly may combine, but ESSENTIALS and LONGEVITY are INDEPENDENT
+    // e.g. 000196×2 (essentials) + 000124×2 (longevity) → each ≤3 → OK ✓
+    // e.g. kit (1mo) + quarterly (3mo) → combined = 4 → WARN ❌
+    const quarterlyMonths=Object.keys(totalComponents).filter(c=>AUS_QUARTERLY.has(c)).reduce((s,c)=>s+(totalComponents[c]||0)*3,0);
+    const kitMonths=Object.keys(totalComponents).filter(c=>AUS_KITS.has(c)).reduce((s,c)=>s+(totalComponents[c]||0)*1,0);
+    if((quarterlyMonths>0||kitMonths>0)&&!orderViolations.length){
+      const essM=Object.keys(totalComponents).filter(c=>AUS_LIMITS.ESSENTIALS.skus.has(c)).reduce((s,c)=>s+(totalComponents[c]||0),0);
+      const lonM=Object.keys(totalComponents).filter(c=>AUS_LIMITS.LONGEVITY.skus.has(c)).reduce((s,c)=>s+(totalComponents[c]||0),0);
+      const crossTotal=quarterlyMonths+kitMonths+Math.max(essM,lonM);
+      if(crossTotal>AUS_COMBINED_MAX){
+        const parts=[];
+        if(kitMonths>0){const ks=Object.keys(totalComponents).filter(c=>AUS_KITS.has(c)).map(c=>`${c.replace('IM8-FG-','')}×${totalComponents[c]}`);parts.push(`${ks.join('+')} (${kitMonths}mo kit)`);}
+        if(quarterlyMonths>0){const qs=Object.keys(totalComponents).filter(c=>AUS_QUARTERLY.has(c)).map(c=>`${c.replace('IM8-FG-','')}×${totalComponents[c]}`);parts.push(`${qs.join('+')} (${quarterlyMonths}mo quarterly)`);}
+        if(essM>=lonM&&essM>0){const es=Object.keys(totalComponents).filter(c=>AUS_LIMITS.ESSENTIALS.skus.has(c)).map(c=>`${c.replace('IM8-FG-','')}×${totalComponents[c]}`);parts.push(`${es.join('+')} (${essM}mo essentials)`);}
+        else if(lonM>0){const ls=Object.keys(totalComponents).filter(c=>AUS_LIMITS.LONGEVITY.skus.has(c)).map(c=>`${c.replace('IM8-FG-','')}×${totalComponents[c]}`);parts.push(`${ls.join('+')} (${lonM}mo longevity)`);}
+        orderViolations.push({category:'Combined monthly total',total:crossTotal,max:AUS_COMBINED_MAX,involved:parts.join(' + ')});
+      }
+    }
+
+    // ── 7-day SKU check: warn if order has ≥3 months AND contains a 7-day SKU ──
+    const has7Day = Object.keys(totalComponents).some(c => AUS_7DAY.has(c));
+    if(has7Day && combinedMonths >= 3){
+      const sevenDaySkus = Object.keys(totalComponents)
+        .filter(c => AUS_7DAY.has(c))
+        .map(c => c.replace('IM8-FG-',''));
+      orderViolations.push({
+        category: '7-day SKU with ≥3 months supply',
+        total: combinedMonths,
+        max: 3,
+        involved: `${sevenDaySkus.join('+')} (7-day) + ${combinedMonths} months from other SKUs`
+      });
+    }
+
+    if(orderViolations.length > 0){
+      violations.push({
+        ref,
+        country: ord.country,
+        skus: ord.skus.map(s=>s.replace('IM8-FG-','')).join(', '),
+        violations: orderViolations
+      });
+    }
+  }
+  return violations;
+}
+
+// Show AUS customs warning as persistent banner on page
+function showAusCustomsWarning(violations){
+  const banner = document.getElementById('ausCustomsBanner');
+  const tbody  = document.getElementById('ausCustomsBannerBody');
+  if(!banner || !tbody) return;
+
+  if(!violations.length){
+    banner.style.display = 'none';
+    return;
+  }
+
+  tbody.innerHTML = violations.map(v => `
+    <tr style="border-bottom:1px solid #fde68a;vertical-align:top">
+      <td style="padding:7px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#92400e;white-space:nowrap">${v.ref}</td>
+      <td style="padding:7px 12px;font-size:12px;color:#374151">${v.skus}</td>
+      <td style="padding:7px 12px;font-size:12px">
+        ${v.violations.map(viol=>`
+          <span style="display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">
+            ❌ ${viol.category}: ${viol.involved} = ${viol.total} (max ${viol.max})
+          </span>`).join('')}
+      </td>
+    </tr>`).join('');
+
+  banner.style.display = 'block';
+  // Scroll banner into view
+  banner.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─── TAB 6: COURIER HISTORY ───────────────────────────────────────────────
+const COURIER_HIST_KEY = 'im8_courier_history';
+const COURIER_HIST_DAYS = 31; // keep 1 month
+let chViewMode = 'week';
+let chChartType = 'bar';
+let chActiveCountries = new Set(['AUS','NZL','SGP','HKG','MYS','PHL','TWN','JPN','KOR','IDN']);
+let chChartInstance = null;
+
+const COUNTRY_COLORS = {
+  AUS:'#ef4444',NZL:'#f97316',SGP:'#eab308',HKG:'#22c55e',
+  MYS:'#14b8a6',PHL:'#3b82f6',TWN:'#8b5cf6',JPN:'#ec4899',
+  KOR:'#06b6d4',IDN:'#84cc16',OTHER:'#9ca3af'
+};
+
+function courierSaveHistory(orderMap){
+  try {
+    const today = new Date();
+    const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const weekKey = getWeekKey(today);
+    const monthKey = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+
+    // Build country counts
+    const byCountry = {};
+    let total = 0;
+    for(const [,ord] of Object.entries(orderMap)){
+      const c = ord.country || 'OTHER';
+      byCountry[c] = (byCountry[c]||0) + 1;
+      total++;
+    }
+
+    // Load existing history
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem(COURIER_HIST_KEY)||'[]'); } catch(e){}
+
+    // Remove entries older than 31 days
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - COURIER_HIST_DAYS);
+    hist = hist.filter(e => new Date(e.date) >= cutoff);
+
+    // Add/update today's entry (replace if same date)
+    hist = hist.filter(e => e.date !== dateKey);
+    hist.push({ date: dateKey, weekKey, monthKey, total, byCountry });
+    hist.sort((a,b) => a.date.localeCompare(b.date));
+    localStorage.setItem(COURIER_HIST_KEY, JSON.stringify(hist));
+  } catch(e){ console.warn('Courier history save failed:', e); }
+}
+
+function getWeekKey(d){
+  const jan1 = new Date(d.getFullYear(),0,1);
+  const wk = Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+  return d.getFullYear()+'-W'+String(wk).padStart(2,'0');
+}
+
+function courierShowHistory(){
+  const modal = document.getElementById('courierHistoryModal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  courierRenderHistory();
+}
+
+function courierHistoryView(mode){
+  chViewMode = mode;
+  ['week','month'].forEach(m=>{
+    const btn=document.getElementById('chView'+m.charAt(0).toUpperCase()+m.slice(1));
+    if(btn){btn.style.background=m===mode?'#111':'';btn.style.color=m===mode?'#fff':'';btn.style.borderColor=m===mode?'#111':'#d0d0d0';}
+  });
+  courierRenderHistory();
+}
+
+function courierHistoryType(type){
+  chChartType = type;
+  ['bar','line'].forEach(t=>{
+    const btn=document.getElementById('chType'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(btn){btn.style.background=t===type?'#111':'';btn.style.color=t===type?'#fff':'';btn.style.borderColor=t===type?'#111':'#d0d0d0';}
+  });
+  courierRenderHistory();
+}
+
+function courierRenderHistory(){
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(COURIER_HIST_KEY)||'[]'); } catch(e){}
+
+  // Get all countries
+  const allCountries = new Set();
+  hist.forEach(e => Object.keys(e.byCountry).forEach(c => allCountries.add(c)));
+
+  // Render country filter chips
+  const filterDiv = document.getElementById('chCountryFilters');
+  if(filterDiv){
+    filterDiv.innerHTML = [...allCountries].sort().map(c => {
+      const active = chActiveCountries.has(c);
+      const col = COUNTRY_COLORS[c] || COUNTRY_COLORS.OTHER;
+      return `<button onclick="chToggleCountry('${c}')" id="chC-${c}"
+        style="padding:3px 10px;font-size:11px;border-radius:12px;cursor:pointer;
+               background:${active?col:'#f3f4f6'};color:${active?'#fff':'#374151'};
+               border:1px solid ${active?col:'#d1d5db'};font-weight:${active?'600':'400'}">${c}</button>`;
+    }).join('');
+  }
+
+  // Group data by period
+  const periodMap = {};
+  hist.forEach(e => {
+    const key = chViewMode==='week' ? e.weekKey : e.monthKey;
+    if(!periodMap[key]) periodMap[key] = {total:0, byCountry:{}};
+    periodMap[key].total += e.total;
+    Object.entries(e.byCountry).forEach(([c,n]) => {
+      periodMap[key].byCountry[c] = (periodMap[key].byCountry[c]||0) + n;
+    });
+  });
+
+  const periods = Object.keys(periodMap).sort();
+  const activeC = [...allCountries].filter(c => chActiveCountries.has(c)).sort();
+
+  // Render chart
+  const canvas = document.getElementById('courierHistoryChart');
+  const noData = document.getElementById('chNoData');
+  if(!canvas) return;
+
+  if(periods.length === 0){
+    if(noData){ noData.style.display='flex'; }
+    if(chChartInstance){ chChartInstance.destroy(); chChartInstance=null; }
+    return;
+  }
+  if(noData) noData.style.display='none';
+
+  const datasets = activeC.map(c => ({
+    label: c,
+    data: periods.map(p => periodMap[p].byCountry[c]||0),
+    backgroundColor: (COUNTRY_COLORS[c]||'#9ca3af')+'CC',
+    borderColor: COUNTRY_COLORS[c]||'#9ca3af',
+    borderWidth: 2,
+    tension: 0.3,
+    fill: false,
+    pointRadius: chChartType==='line'?4:0,
+  }));
+
+  if(chChartInstance) chChartInstance.destroy();
+  // Load Chart.js dynamically if not loaded
+  if(typeof Chart === 'undefined'){
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload = () => buildChart(canvas, periods, datasets);
+    document.head.appendChild(s);
+  } else {
+    buildChart(canvas, periods, datasets);
+  }
+
+  // Render summary table
+  const tbody = document.getElementById('chSummaryBody');
+  if(tbody){
+    tbody.innerHTML = [...periods].reverse().map(p => {
+      const d = periodMap[p];
+      const fed=(d.byCountry['TWN']||0)+(d.byCountry['IDN']||0)+(d.byCountry['JPN']||0)+(d.byCountry['KOR']||0)+(d.byCountry['SGP']||0)+(d.byCountry['AUS']||0)+(d.byCountry['NZL']||0);
+      const dhl=d.byCountry['AUS_DHL']||0;
+      const sf=d.byCountry['HKG']||0;
+      const gps=(d.byCountry['MYS']||0)+(d.byCountry['PHL']||0);
+      return `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:7px 12px;font-weight:500;color:#111">${p}</td>
+        <td style="padding:7px 12px;text-align:right">${d.total}</td>
+        <td style="padding:7px 12px;text-align:right;color:#ef4444">${fed}</td>
+        <td style="padding:7px 12px;text-align:right;color:#3b82f6">${dhl}</td>
+        <td style="padding:7px 12px;text-align:right;color:#7c3aed">${sf}</td>
+        <td style="padding:7px 12px;text-align:right;color:#f59e0b">${gps}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function buildChart(canvas, labels, datasets){
+  chChartInstance = new Chart(canvas, {
+    type: chChartType,
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', labels:{font:{size:11},boxWidth:12} },
+        tooltip: { mode:'index', intersect:false }
+      },
+      scales: {
+        x: { stacked: chChartType==='bar', grid:{display:false}, ticks:{font:{size:10}} },
+        y: { stacked: chChartType==='bar', beginAtZero:true, ticks:{font:{size:10}} }
+      }
+    }
+  });
+}
+
+function chToggleCountry(c){
+  if(chActiveCountries.has(c)) chActiveCountries.delete(c);
+  else chActiveCountries.add(c);
+  courierRenderHistory();
+}
+
+function courierClearHistory(){
+  if(!confirm('Clear all courier history?')) return;
+  localStorage.removeItem(COURIER_HIST_KEY);
+  courierRenderHistory();
+}
+
+</script>
+</body>
+</html>
