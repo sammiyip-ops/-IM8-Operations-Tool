@@ -179,6 +179,9 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
           <div class="upload-label">.xlsx or .csv</div>
           <div class="upload-name" id="salesName"></div>
         </div>
+        <div style="text-align:right;margin-top:6px">
+          <a href="#" onclick="downloadFulfillmentTemplate();return false;" style="font-size:11px;color:#2563eb;text-decoration:none">⬇️ Download template</a>
+        </div>
       </div>
       <div>
         <div class="section-label">On hand inventory</div>
@@ -3456,6 +3459,47 @@ function courierClearHistory(){
   if(!confirm('Clear all courier history?')) return;
   localStorage.removeItem(COURIER_HIST_KEY);
   courierRenderHistory();
+}
+
+// ─── TAB 2: FULFILLMENT SALES SHEET TEMPLATE ─────────────────────────────
+function downloadFulfillmentTemplate(){
+  const sampleData = [
+    {'Sales order':'H007-SO-146201','Item number':'IM8-FG-000143','Quantity':1,'Tracking':'380624843302'},
+    {'Sales order':'H007-SO-146201','Item number':'IM8-FG-000242','Quantity':1,'Tracking':'380624843302'},
+    {'Sales order':'H007-SO-147130','Item number':'IM8-FG-000200','Quantity':2,'Tracking':'380624829434'},
+    {'Sales order':'H007-SO-147953','Item number':'IM8-FG-000035','Quantity':1,'Tracking':''},
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(sampleData);
+  // Style header row
+  const headerStyle = {font:{bold:true,color:{rgb:'FFFFFF'},name:'Calibri',sz:11},
+    fill:{patternType:'solid',fgColor:{rgb:'4472C4'}}};
+  ['A1','B1','C1','D1'].forEach(cell=>{ if(ws[cell]) ws[cell].s = headerStyle; });
+  ws['!cols'] = [{wch:20},{wch:18},{wch:10},{wch:18}];
+  ws['!autofilter'] = {ref:'A1:D1'};
+
+  // Add a notes sheet explaining required columns
+  const notesData = [
+    {'Column':'Sales order','Required':'Yes','Notes':'Order/reference number — used to group line items into one shipment'},
+    {'Column':'Item number','Required':'Yes','Notes':'SKU code, e.g. IM8-FG-000143'},
+    {'Column':'Quantity','Required':'Yes','Notes':'Quantity for this line item'},
+    {'Column':'Tracking','Required':'No (but flagged if blank)','Notes':'AWB / tracking number. Leave blank to test the blank-AWB warning banner'},
+  ];
+  const wsNotes = XLSX.utils.json_to_sheet(notesData);
+  wsNotes['!cols'] = [{wch:16},{wch:24},{wch:60}];
+  ['A1','B1','C1'].forEach(cell=>{ if(wsNotes[cell]) wsNotes[cell].s = headerStyle; });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sales Sheet');
+  XLSX.utils.book_append_sheet(wb, wsNotes, 'Column Guide');
+
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array', cellStyles:true});
+  const blob = new Blob([wbout], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'Fulfillment_Sales_Sheet_Template.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
 </script>
