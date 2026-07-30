@@ -3553,6 +3553,19 @@ function drmInit(){
     dateInput.value = today.toISOString().split('T')[0];
   }
   if(drmEntries.length === 0) drmAddEntry();
+
+  // Safety net: stop the whole page navigating away if a photo is dropped
+  // outside a designated drop zone (e.g. dropped on the card background)
+  if(!window._drmGlobalDropGuard){
+    window._drmGlobalDropGuard = true;
+    ['dragover','drop'].forEach(evt => {
+      window.addEventListener(evt, e => {
+        if(document.getElementById('tab6') && document.getElementById('tab6').style.display !== 'none'){
+          e.preventDefault();
+        }
+      });
+    });
+  }
 }
 
 function drmAddEntry(){
@@ -3615,8 +3628,12 @@ function drmRenderEntries(){
             <img src="${img.url}" style="width:100%;height:100%;object-fit:cover">
             <button onclick="drmRemoveImage(${e.id},${idx})" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(220,38,38,0.9);color:#fff;border:none;font-size:11px;cursor:pointer;line-height:1">✕</button>
           </div>`).join('')}
-        <label style="width:90px;height:90px;border:1.5px dashed #bbb;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#999;font-size:11px;text-align:center;background:#fff">
-          + Add photo
+        <label id="drmDrop-${e.id}"
+          ondragover="event.preventDefault();event.stopPropagation();this.style.background='#eef2ff';this.style.borderColor='#6366f1';"
+          ondragleave="event.preventDefault();event.stopPropagation();this.style.background='#fff';this.style.borderColor='#bbb';"
+          ondrop="event.preventDefault();event.stopPropagation();this.style.background='#fff';this.style.borderColor='#bbb';drmHandleFiles(${e.id},event.dataTransfer.files);"
+          style="width:90px;height:90px;border:1.5px dashed #bbb;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#999;font-size:11px;text-align:center;background:#fff;padding:4px;transition:background 0.15s,border-color 0.15s">
+          Drag photo here or click
           <input type="file" accept="image/*" multiple style="display:none" onchange="drmHandleFiles(${e.id},this.files);this.value=''">
         </label>
       </div>
