@@ -3753,6 +3753,41 @@ async function drmGenerateReport(){
   };
   dlArea.appendChild(makeBtn(docxBlob, fileBase+'.docx', `⬇️ Download ${fileBase}.docx`, 'btn-green'));
   dlArea.appendChild(makeBtn(pdfBlob, fileBase+'.pdf', `⬇️ Download ${fileBase}.pdf`, 'btn-dark'));
+
+  // ── Build Excel: date in row 1, then SKU / -qty rows ──────────────────
+  const wsData = [[parseInt(dateStr)]];
+  validEntries.forEach(e => {
+    wsData.push([ e.sku.trim(), -(parseInt(e.qty)||0) ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:20},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Damaged Items');
+  const xlsxOut = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const xlsxBlob = new Blob([xlsxOut], {type:'application/octet-stream'});
+  dlArea.appendChild(makeBtn(xlsxBlob, fileBase+'.xlsx', `⬇️ Download ${fileBase}.xlsx`, 'btn-dark'));
+
+  // ── Copyable text summary ─────────────────────────────────────────────
+  const summaryLines = [dateStr, ...validEntries.map(e => `${e.sku.trim()}\t${-(parseInt(e.qty)||0)}`)];
+  const summaryText = summaryLines.join('\n');
+
+  const summaryBox = document.createElement('div');
+  summaryBox.style.cssText = 'margin-top:14px;padding:12px;background:#f8f8f8;border:1px solid #e5e7eb;border-radius:8px';
+  summaryBox.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:600;color:#555">Copyable summary</span>
+      <button id="drmCopyBtn" style="padding:4px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff;border:1px solid #ddd;color:#333">⧉ Copy</button>
+    </div>
+    <pre style="font-family:monospace;font-size:12px;color:#111;white-space:pre-wrap;margin:0">${summaryText}</pre>
+  `;
+  dlArea.appendChild(summaryBox);
+  document.getElementById('drmCopyBtn').onclick = () => {
+    navigator.clipboard.writeText(summaryText).then(() => {
+      const btn = document.getElementById('drmCopyBtn');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = '⧉ Copy'; }, 1500);
+    });
+  };
 }
 
 </script>
