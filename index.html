@@ -106,6 +106,7 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
   <div class="tab" onclick="switchTab(3)"><span class="tab-num">Tab 4</span>Production Forecast</div>
   <div class="tab" onclick="switchTab(4)"><span class="tab-num">Tab 5</span>Gift Tracker</div>
   <div class="tab" onclick="switchTab(5)"><span class="tab-num">Tab 6</span>Courier Splitter</div>
+  <div class="tab" onclick="switchTab(6)"><span class="tab-num">Tab 7</span>Damage Report</div>
 </div>
 <div class="panels">
 
@@ -639,6 +640,31 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
   </div>
 </div>
 
+
+<!-- TAB 7: DAMAGE REPORT GENERATOR -->
+<div class="panel" id="tab6">
+  <div class="card">
+    <div class="card-title">Damage Report Generator</div>
+    <div style="font-size:12px;color:#555;margin-bottom:16px;padding:10px 14px;background:#f8f8f8;border-radius:8px;border:1px solid #eee;line-height:1.8">
+      Add one entry per damaged SKU: type the SKU code and quantity, then drag in photos. Generates a Word doc and PDF matching the standard damage report layout — <code style="background:#f0f0f0;padding:1px 5px;border-radius:3px">SKU-CODE (-qty)</code> followed by the photo(s).
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;color:#555">Report date</label>
+      <input type="date" id="drmDate" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+    </div>
+
+    <div id="drmEntries"></div>
+
+    <button onclick="drmAddEntry()" style="width:100%;padding:10px;margin-top:8px;background:#f8f8f8;border:1px dashed #bbb;border-radius:8px;font-size:13px;color:#555;cursor:pointer">+ Add SKU entry</button>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-dark" onclick="drmGenerateReport()" style="flex:1">Generate Word + PDF</button>
+    </div>
+    <div id="drmDownloadArea" style="margin-top:12px"></div>
+  </div>
+</div>
+
 </div><!-- end .panels -->
 </div><!-- end .app-layout -->
 
@@ -725,6 +751,7 @@ function switchTab(i){
   document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
   document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
   if(i===5 && typeof courierRenderRules==='function') courierRenderRules();
+  if(i===6 && typeof drmInit==='function') drmInit();
 }
 
 let inputMode=0;
@@ -3512,6 +3539,203 @@ function downloadFulfillmentTemplate(){
   a.href = url; a.download = 'Fulfillment_Sales_Sheet_Template.xlsx';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+// ─── TAB 7: DAMAGE REPORT GENERATOR ───────────────────────────────────────
+let drmEntries = [];
+let drmEntrySeq = 0;
+let drmLibsLoaded = { docx:false, html2pdf:false };
+
+function drmInit(){
+  const dateInput = document.getElementById('drmDate');
+  if(dateInput && !dateInput.value){
+    const today = new Date();
+    dateInput.value = today.toISOString().split('T')[0];
+  }
+  if(drmEntries.length === 0) drmAddEntry();
+}
+
+function drmAddEntry(){
+  const id = ++drmEntrySeq;
+  drmEntries.push({ id, sku:'', qty:'', images:[] });
+  drmRenderEntries();
+}
+
+function drmRemoveEntry(id){
+  drmEntries = drmEntries.filter(e => e.id !== id);
+  drmRenderEntries();
+}
+
+function drmUpdateField(id, field, value){
+  const e = drmEntries.find(e => e.id === id);
+  if(e) e[field] = value;
+}
+
+function drmHandleFiles(id, fileList){
+  const entry = drmEntries.find(e => e.id === id);
+  if(!entry) return;
+  [...fileList].forEach(file => {
+    if(!file.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(file);
+    entry.images.push({ file, url });
+  });
+  drmRenderEntries();
+}
+
+function drmRemoveImage(id, idx){
+  const entry = drmEntries.find(e => e.id === id);
+  if(!entry) return;
+  URL.revokeObjectURL(entry.images[idx].url);
+  entry.images.splice(idx, 1);
+  drmRenderEntries();
+}
+
+function drmRenderEntries(){
+  const container = document.getElementById('drmEntries');
+  if(!container) return;
+  container.innerHTML = drmEntries.map(e => `
+    <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:12px;background:#fafafa">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <input type="text" placeholder="SKU code e.g. IM8-FG-000129" value="${e.sku}"
+          oninput="drmUpdateField(${e.id},'sku',this.value)"
+          style="flex:1;min-width:200px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:13px;color:#555">Qty damaged:</span>
+          <input type="number" placeholder="e.g. 115" value="${e.qty}" min="0"
+            oninput="drmUpdateField(${e.id},'qty',this.value)"
+            style="width:90px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+          <span style="font-size:12px;color:#999">→ shows as (-${e.qty||'0'})</span>
+        </div>
+        <button onclick="drmRemoveEntry(${e.id})" style="margin-left:auto;padding:4px 10px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff5f5;border:1px solid #fca5a5;color:#dc2626">✕ Remove entry</button>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+        ${e.images.map((img,idx) => `
+          <div style="position:relative;width:90px;height:90px;border-radius:6px;overflow:hidden;border:1px solid #ddd">
+            <img src="${img.url}" style="width:100%;height:100%;object-fit:cover">
+            <button onclick="drmRemoveImage(${e.id},${idx})" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(220,38,38,0.9);color:#fff;border:none;font-size:11px;cursor:pointer;line-height:1">✕</button>
+          </div>`).join('')}
+        <label style="width:90px;height:90px;border:1.5px dashed #bbb;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#999;font-size:11px;text-align:center;background:#fff">
+          + Add photo
+          <input type="file" accept="image/*" multiple style="display:none" onchange="drmHandleFiles(${e.id},this.files);this.value=''">
+        </label>
+      </div>
+    </div>`).join('');
+}
+
+function drmLoadScript(src){
+  return new Promise((resolve,reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function drmEnsureLibs(){
+  if(!drmLibsLoaded.docx){
+    await drmLoadScript('https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs');
+    drmLibsLoaded.docx = true;
+  }
+  if(!drmLibsLoaded.html2pdf){
+    await drmLoadScript('https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js');
+    drmLibsLoaded.html2pdf = true;
+  }
+}
+
+function drmGetImageDims(img){
+  return new Promise(resolve => {
+    const im = new Image();
+    im.onload = () => resolve({w:im.naturalWidth, h:im.naturalHeight});
+    im.onerror = () => resolve({w:400,h:300});
+    im.src = img.url;
+  });
+}
+
+async function drmGenerateReport(){
+  const validEntries = drmEntries.filter(e => e.sku.trim() && e.images.length>0);
+  if(!validEntries.length){
+    alert('Please add at least one entry with a SKU code and at least one photo.');
+    return;
+  }
+
+  const dlArea = document.getElementById('drmDownloadArea');
+  dlArea.innerHTML = '<div style="font-size:13px;color:#888">Generating report...</div>';
+
+  await drmEnsureLibs();
+
+  const dateVal = document.getElementById('drmDate').value || new Date().toISOString().split('T')[0];
+  const dateStr = dateVal.replace(/-/g,'');
+  const fileBase = `${dateStr}_IM8_Damaged_Items`;
+
+  // ── Build DOCX ──────────────────────────────────────────────────────────
+  const { Document, Packer, Paragraph, TextRun, ImageRun } = window.docx;
+  const MAX_IMG_WIDTH = 220; // px per image in docx
+
+  const children = [];
+  for(const e of validEntries){
+    const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
+    children.push(new Paragraph({ children:[ new TextRun({ text: `${e.sku.trim()} ${qtyStr}`, size:24 }) ] }));
+    children.push(new Paragraph({ text:'' }));
+
+    const imageRuns = [];
+    for(const img of e.images){
+      const dims = await drmGetImageDims(img);
+      const scale = Math.min(1, MAX_IMG_WIDTH / dims.w);
+      const w = Math.round(dims.w * scale);
+      const h = Math.round(dims.h * scale);
+      const buf = await img.file.arrayBuffer();
+      const ext = (img.file.type.split('/')[1] || 'png').replace('jpeg','jpg');
+      imageRuns.push(new ImageRun({ type: ext, data: buf, transformation: { width:w, height:h } }));
+    }
+    children.push(new Paragraph({ children: imageRuns }));
+    children.push(new Paragraph({ text:'' }));
+  }
+
+  const doc = new Document({ sections: [{ properties:{}, children }] });
+  const docxBlob = await Packer.toBlob(doc);
+
+  // ── Build PDF via hidden HTML render ─────────────────────────────────────
+  const pdfContainer = document.createElement('div');
+  pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif';
+  let pdfHtml = '';
+  for(const e of validEntries){
+    const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
+    pdfHtml += `<div style="margin-bottom:24px">
+      <div style="font-size:14px;margin-bottom:8px">${e.sku.trim()} ${qtyStr}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain">`).join('')}
+      </div>
+    </div>`;
+  }
+  pdfContainer.innerHTML = pdfHtml;
+  document.body.appendChild(pdfContainer);
+
+  const pdfBlob = await html2pdf().from(pdfContainer).set({
+    margin: 10,
+    filename: fileBase+'.pdf',
+    html2canvas: { scale:2, useCORS:true },
+    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+  }).outputPdf('blob');
+
+  document.body.removeChild(pdfContainer);
+
+  // ── Present download buttons ──────────────────────────────────────────
+  dlArea.innerHTML = '';
+  const makeBtn = (blob, filename, label, cls) => {
+    const btn = document.createElement('button');
+    btn.className = cls;
+    btn.style.width = '100%'; btn.style.marginBottom='8px';
+    btn.textContent = label;
+    btn.onclick = () => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    };
+    return btn;
+  };
+  dlArea.appendChild(makeBtn(docxBlob, fileBase+'.docx', `⬇️ Download ${fileBase}.docx`, 'btn-green'));
+  dlArea.appendChild(makeBtn(pdfBlob, fileBase+'.pdf', `⬇️ Download ${fileBase}.pdf`, 'btn-dark'));
 }
 
 </script>
