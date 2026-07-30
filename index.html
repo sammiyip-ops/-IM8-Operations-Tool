@@ -3665,18 +3665,41 @@ function drmRenderEntries(){
 function drmLoadScript(src){
   return new Promise((resolve,reject) => {
     const s = document.createElement('script');
-    s.src = src; s.onload = resolve; s.onerror = reject;
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load script from: '+src));
     document.head.appendChild(s);
   });
 }
 
+// Try multiple CDN mirrors in sequence — some networks/ad-blockers block one but not another
+async function drmLoadScriptWithFallback(urls, checkFn, libName){
+  let lastErr;
+  for(const url of urls){
+    try{
+      await drmLoadScript(url);
+      if(!checkFn || checkFn()) return; // success
+      lastErr = new Error(`${libName} loaded from ${url} but did not initialize correctly`);
+    } catch(err){
+      lastErr = err;
+    }
+  }
+  throw new Error(`Could not load ${libName} from any source (tried ${urls.length} URL${urls.length>1?'s':''}). Last error: ${lastErr ? lastErr.message : 'unknown'}. This is usually a network/firewall/ad-blocker issue — try disabling ad-blockers or switching networks.`);
+}
+
 async function drmEnsureLibs(){
   if(!drmLibsLoaded.docx){
-    await drmLoadScript('https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs');
+    await drmLoadScriptWithFallback([
+      'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs',
+      'https://unpkg.com/docx@9.7.1/dist/index.umd.cjs'
+    ], () => typeof window.docx !== 'undefined', 'docx (Word generator)');
     drmLibsLoaded.docx = true;
   }
   if(!drmLibsLoaded.html2pdf){
-    await drmLoadScript('https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js');
+    await drmLoadScriptWithFallback([
+      'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js',
+      'https://unpkg.com/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js'
+    ], () => typeof window.html2pdf !== 'undefined', 'html2pdf.js (PDF generator)');
     drmLibsLoaded.html2pdf = true;
   }
 }
