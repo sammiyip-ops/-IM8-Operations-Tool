@@ -3668,6 +3668,29 @@ function drmGetImageDims(img){
   });
 }
 
+// Normalize ANY image format (HEIC, WEBP, etc — common from phones) to PNG
+// via canvas, so docx's ImageRun (which only accepts jpg/png/gif/bmp) always works.
+function drmImageToPngBuffer(img){
+  return new Promise((resolve,reject) => {
+    const im = new Image();
+    im.onload = () => {
+      try{
+        const canvas = document.createElement('canvas');
+        canvas.width = im.naturalWidth;
+        canvas.height = im.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(im, 0, 0);
+        canvas.toBlob(blob => {
+          if(!blob){ reject(new Error('Canvas toBlob failed')); return; }
+          blob.arrayBuffer().then(resolve).catch(reject);
+        }, 'image/png');
+      } catch(err){ reject(err); }
+    };
+    im.onerror = () => reject(new Error('Could not load image — the file may be corrupted or an unsupported format (try re-saving as JPG/PNG).'));
+    im.src = img.url;
+  });
+}
+
 async function drmGenerateReport(){
   const validEntries = drmEntries.filter(e => e.sku.trim() && e.images.length>0);
   if(!validEntries.length){
@@ -3676,119 +3699,142 @@ async function drmGenerateReport(){
   }
 
   const dlArea = document.getElementById('drmDownloadArea');
-  dlArea.innerHTML = '<div style="font-size:13px;color:#888">Generating report...</div>';
+  dlArea.innerHTML = '<div style="font-size:13px;color:#888">Loading libraries...</div>';
 
-  await drmEnsureLibs();
+  try{
+    await drmEnsureLibs();
+    dlArea.innerHTML = '<div style="font-size:13px;color:#888">Generating report...</div>';
 
-  const dateVal = document.getElementById('drmDate').value || new Date().toISOString().split('T')[0];
-  const dateStr = dateVal.replace(/-/g,'');
-  const fileBase = `${dateStr}_IM8_Damaged_Items`;
+    const dateVal = document.getElementById('drmDate').value || new Date().toISOString().split('T')[0];
+    const dateStr = dateVal.replace(/-/g,'');
+    const fileBase = `${dateStr}_IM8_Damaged_Items`;
 
-  // ── Build DOCX ──────────────────────────────────────────────────────────
-  const { Document, Packer, Paragraph, TextRun, ImageRun } = window.docx;
-  const MAX_IMG_WIDTH = 220; // px per image in docx
-
-  const children = [];
-  for(const e of validEntries){
-    const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
-    children.push(new Paragraph({ children:[ new TextRun({ text: `${e.sku.trim()} ${qtyStr}`, size:24 }) ] }));
-    children.push(new Paragraph({ text:'' }));
-
-    const imageRuns = [];
-    for(const img of e.images){
-      const dims = await drmGetImageDims(img);
-      const scale = Math.min(1, MAX_IMG_WIDTH / dims.w);
-      const w = Math.round(dims.w * scale);
-      const h = Math.round(dims.h * scale);
-      const buf = await img.file.arrayBuffer();
-      const ext = (img.file.type.split('/')[1] || 'png').replace('jpeg','jpg');
-      imageRuns.push(new ImageRun({ type: ext, data: buf, transformation: { width:w, height:h } }));
+    // ── Pre-convert every image to a normalized PNG buffer + fresh dims ──
+    // (handles HEIC/WEBP/any phone format that docx's ImageRun can't read directly)
+    for(const e of validEntries){
+      for(const img of e.images){
+        if(!img._pngBuffer){
+          img._pngBuffer = await drmImageToPngBuffer(img);
+          img._dims = await drmGetImageDims(img);
+        }
+      }
     }
-    children.push(new Paragraph({ children: imageRuns }));
-    children.push(new Paragraph({ text:'' }));
-  }
 
-  const doc = new Document({ sections: [{ properties:{}, children }] });
-  const docxBlob = await Packer.toBlob(doc);
+    // ── Build DOCX ──────────────────────────────────────────────────────
+    const { Document, Packer, Paragraph, TextRun, ImageRun } = window.docx;
+    const MAX_IMG_WIDTH = 220; // px per image in docx
 
-  // ── Build PDF via hidden HTML render ─────────────────────────────────────
-  const pdfContainer = document.createElement('div');
-  pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif';
-  let pdfHtml = '';
-  for(const e of validEntries){
-    const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
-    pdfHtml += `<div style="margin-bottom:24px">
-      <div style="font-size:14px;margin-bottom:8px">${e.sku.trim()} ${qtyStr}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain">`).join('')}
+    const children = [];
+    for(const e of validEntries){
+      const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
+      children.push(new Paragraph({ children:[ new TextRun({ text: `${e.sku.trim()} ${qtyStr}`, size:24 }) ] }));
+      children.push(new Paragraph({ text:'' }));
+
+      const imageRuns = [];
+      for(const img of e.images){
+        const dims = img._dims;
+        const scale = Math.min(1, MAX_IMG_WIDTH / dims.w);
+        const w = Math.max(1, Math.round(dims.w * scale));
+        const h = Math.max(1, Math.round(dims.h * scale));
+        imageRuns.push(new ImageRun({ type:'png', data: img._pngBuffer, transformation: { width:w, height:h } }));
+      }
+      children.push(new Paragraph({ children: imageRuns }));
+      children.push(new Paragraph({ text:'' }));
+    }
+
+    const doc = new Document({ sections: [{ properties:{}, children }] });
+    const docxBlob = await Packer.toBlob(doc);
+
+    // ── Build PDF via hidden HTML render ─────────────────────────────────
+    const pdfContainer = document.createElement('div');
+    pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif';
+    let pdfHtml = '';
+    for(const e of validEntries){
+      const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
+      pdfHtml += `<div style="margin-bottom:24px">
+        <div style="font-size:14px;margin-bottom:8px">${e.sku.trim()} ${qtyStr}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain">`).join('')}
+        </div>
+      </div>`;
+    }
+    pdfContainer.innerHTML = pdfHtml;
+    document.body.appendChild(pdfContainer);
+
+    let pdfBlob;
+    try{
+      pdfBlob = await html2pdf().from(pdfContainer).set({
+        margin: 10,
+        filename: fileBase+'.pdf',
+        html2canvas: { scale:2, useCORS:true },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+      }).outputPdf('blob');
+    } finally {
+      document.body.removeChild(pdfContainer);
+    }
+
+    // ── Present download buttons ────────────────────────────────────────
+    dlArea.innerHTML = '';
+    const makeBtn = (blob, filename, label, cls) => {
+      const btn = document.createElement('button');
+      btn.className = cls;
+      btn.style.width = '100%'; btn.style.marginBottom='8px';
+      btn.textContent = label;
+      btn.onclick = () => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+      };
+      return btn;
+    };
+    dlArea.appendChild(makeBtn(docxBlob, fileBase+'.docx', `⬇️ Download ${fileBase}.docx`, 'btn-green'));
+    dlArea.appendChild(makeBtn(pdfBlob, fileBase+'.pdf', `⬇️ Download ${fileBase}.pdf`, 'btn-dark'));
+
+    // ── Build Excel: date in row 1, then SKU / -qty rows ────────────────
+    const wsData = [[parseInt(dateStr)]];
+    validEntries.forEach(e => {
+      wsData.push([ e.sku.trim(), -(parseInt(e.qty)||0) ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{wch:20},{wch:10}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Damaged Items');
+    const xlsxOut = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const xlsxBlob = new Blob([xlsxOut], {type:'application/octet-stream'});
+    dlArea.appendChild(makeBtn(xlsxBlob, fileBase+'.xlsx', `⬇️ Download ${fileBase}.xlsx`, 'btn-dark'));
+
+    // ── Copyable text summary ───────────────────────────────────────────
+    const summaryLines = [dateStr, ...validEntries.map(e => `${e.sku.trim()}\t${-(parseInt(e.qty)||0)}`)];
+    const summaryText = summaryLines.join('\n');
+
+    const summaryBox = document.createElement('div');
+    summaryBox.style.cssText = 'margin-top:14px;padding:12px;background:#f8f8f8;border:1px solid #e5e7eb;border-radius:8px';
+    summaryBox.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:600;color:#555">Copyable summary</span>
+        <button id="drmCopyBtn" style="padding:4px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff;border:1px solid #ddd;color:#333">⧉ Copy</button>
       </div>
+      <pre style="font-family:monospace;font-size:12px;color:#111;white-space:pre-wrap;margin:0">${summaryText}</pre>
+    `;
+    dlArea.appendChild(summaryBox);
+    document.getElementById('drmCopyBtn').onclick = () => {
+      navigator.clipboard.writeText(summaryText).then(() => {
+        const btn = document.getElementById('drmCopyBtn');
+        btn.textContent = '✓ Copied';
+        setTimeout(() => { btn.textContent = '⧉ Copy'; }, 1500);
+      });
+    };
+
+  } catch(err){
+    console.error('Damage report generation failed:', err);
+    dlArea.innerHTML = `<div style="padding:10px 12px;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;font-size:12px;color:#dc2626">
+      ❌ Failed to generate report: ${err.message || err}<br>
+      <span style="color:#991b1b;font-size:11px">Check the browser console (F12) for full details, or try a different photo format (JPG/PNG work best).</span>
     </div>`;
   }
-  pdfContainer.innerHTML = pdfHtml;
-  document.body.appendChild(pdfContainer);
-
-  const pdfBlob = await html2pdf().from(pdfContainer).set({
-    margin: 10,
-    filename: fileBase+'.pdf',
-    html2canvas: { scale:2, useCORS:true },
-    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-  }).outputPdf('blob');
-
-  document.body.removeChild(pdfContainer);
-
-  // ── Present download buttons ──────────────────────────────────────────
-  dlArea.innerHTML = '';
-  const makeBtn = (blob, filename, label, cls) => {
-    const btn = document.createElement('button');
-    btn.className = cls;
-    btn.style.width = '100%'; btn.style.marginBottom='8px';
-    btn.textContent = label;
-    btn.onclick = () => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=filename;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url),1000);
-    };
-    return btn;
-  };
-  dlArea.appendChild(makeBtn(docxBlob, fileBase+'.docx', `⬇️ Download ${fileBase}.docx`, 'btn-green'));
-  dlArea.appendChild(makeBtn(pdfBlob, fileBase+'.pdf', `⬇️ Download ${fileBase}.pdf`, 'btn-dark'));
-
-  // ── Build Excel: date in row 1, then SKU / -qty rows ──────────────────
-  const wsData = [[parseInt(dateStr)]];
-  validEntries.forEach(e => {
-    wsData.push([ e.sku.trim(), -(parseInt(e.qty)||0) ]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:20},{wch:10}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Damaged Items');
-  const xlsxOut = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-  const xlsxBlob = new Blob([xlsxOut], {type:'application/octet-stream'});
-  dlArea.appendChild(makeBtn(xlsxBlob, fileBase+'.xlsx', `⬇️ Download ${fileBase}.xlsx`, 'btn-dark'));
-
-  // ── Copyable text summary ─────────────────────────────────────────────
-  const summaryLines = [dateStr, ...validEntries.map(e => `${e.sku.trim()}\t${-(parseInt(e.qty)||0)}`)];
-  const summaryText = summaryLines.join('\n');
-
-  const summaryBox = document.createElement('div');
-  summaryBox.style.cssText = 'margin-top:14px;padding:12px;background:#f8f8f8;border:1px solid #e5e7eb;border-radius:8px';
-  summaryBox.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:12px;font-weight:600;color:#555">Copyable summary</span>
-      <button id="drmCopyBtn" style="padding:4px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:#fff;border:1px solid #ddd;color:#333">⧉ Copy</button>
-    </div>
-    <pre style="font-family:monospace;font-size:12px;color:#111;white-space:pre-wrap;margin:0">${summaryText}</pre>
-  `;
-  dlArea.appendChild(summaryBox);
-  document.getElementById('drmCopyBtn').onclick = () => {
-    navigator.clipboard.writeText(summaryText).then(() => {
-      const btn = document.getElementById('drmCopyBtn');
-      btn.textContent = '✓ Copied';
-      setTimeout(() => { btn.textContent = '⧉ Copy'; }, 1500);
-    });
-  };
 }
+
 
 </script>
 </body>
