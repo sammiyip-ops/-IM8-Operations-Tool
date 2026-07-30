@@ -3584,6 +3584,27 @@ function drmUpdateField(id, field, value){
   if(e) e[field] = value;
 }
 
+// Normalize shorthand SKU input to full IM8-FG-000XXX / IM8-RM-000XXX format.
+// Handles: "128", "FG-128", "fg128", "FG128", "RM-228", "rm-228", "IM8-FG-000128" (already full)
+function drmNormalizeSku(raw){
+  let s = raw.trim();
+  if(!s) return s;
+  // Already fully formatted (case-insensitive) — just fix casing of prefix
+  const fullMatch = s.match(/^im8-(fg|rm)-(\d+)$/i);
+  if(fullMatch){
+    return `IM8-${fullMatch[1].toUpperCase()}-${fullMatch[2].padStart(6,'0')}`;
+  }
+  // Shorthand: optional "FG"/"RM" + optional dash/space + digits
+  const shortMatch = s.match(/^(fg|rm)?[\s\-]?(\d+)$/i);
+  if(shortMatch){
+    const type = (shortMatch[1] || 'FG').toUpperCase(); // default to FG if no prefix given
+    const num = shortMatch[2].padStart(6,'0');
+    return `IM8-${type}-${num}`;
+  }
+  // Doesn't match any known shorthand pattern — leave as typed (e.g. already has IM8- but odd digit count)
+  return s.toUpperCase();
+}
+
 function drmHandleFiles(id, fileList){
   const entry = drmEntries.find(e => e.id === id);
   if(!entry) return;
@@ -3609,8 +3630,9 @@ function drmRenderEntries(){
   container.innerHTML = drmEntries.map(e => `
     <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:12px;background:#fafafa">
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-        <input type="text" placeholder="SKU code e.g. IM8-FG-000129" value="${e.sku}"
+        <input type="text" placeholder="SKU code — e.g. FG-128, RM228, or IM8-FG-000129" value="${e.sku}"
           oninput="drmUpdateField(${e.id},'sku',this.value)"
+          onblur="this.value=drmNormalizeSku(this.value);drmUpdateField(${e.id},'sku',this.value)"
           style="flex:1;min-width:200px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:13px;color:#555">Qty damaged:</span>
