@@ -2823,7 +2823,7 @@ function runCourierSplit(){
 
   // ── all sheet ──
   const allCols=Object.keys(courierRawData[0]);
-  const wsAll=writeRaw(allCols,dataRows);
+  const wsAll=writeRaw(allCols,activeRows); // excludes cancelled/void/return/refund orders
   XLSX.utils.book_append_sheet(wb,wsAll,'all');
 
   // ── FEDEX sheet: raw cols A-J + sum pivot col L (11) ──
