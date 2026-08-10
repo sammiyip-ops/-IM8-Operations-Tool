@@ -3797,7 +3797,7 @@ async function drmGenerateReport(){
     // white overlay (with a "Generating..." label) directly in the viewport,
     // capture it, then remove it. This is the standard, reliable approach.
     const pdfOverlay = document.createElement('div');
-    pdfOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#fff;z-index:999999;overflow:auto;display:flex;flex-direction:column;align-items:center';
+    pdfOverlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;min-height:100vh;background:#fff;z-index:999999;display:flex;flex-direction:column;align-items:center';
     pdfOverlay.innerHTML = '<div style="padding:16px;font-size:13px;color:#888;font-family:Calibri,Arial,sans-serif">Rendering PDF…</div>';
 
     const pdfContent = document.createElement('div');
@@ -3805,7 +3805,7 @@ async function drmGenerateReport(){
     let pdfHtml = '';
     for(const e of validEntries){
       const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
-      pdfHtml += `<div style="margin-bottom:24px">
+      pdfHtml += `<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">
         <div style="font-size:14px;margin-bottom:8px;color:#111">${e.sku.trim()} ${qtyStr}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain;display:block">`).join('')}
@@ -3830,14 +3830,18 @@ async function drmGenerateReport(){
     }));
     // Extra safety: give the browser a couple of paint cycles before snapshotting
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // Scroll to top so html2canvas's capture offset lines up with the overlay's
+    // top edge — a non-zero scroll position is a common cause of a blank leading page
+    window.scrollTo(0,0);
 
     let pdfBlob;
     try{
       pdfBlob = await html2pdf().from(pdfContent).set({
         margin: 10,
         filename: fileBase+'.pdf',
-        html2canvas: { scale:2, useCORS:true, logging:false },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+        html2canvas: { scale:2, useCORS:true, logging:false, scrollX:0, scrollY:0 },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+        pagebreak: { mode: ['css','avoid-all'] }
       }).outputPdf('blob');
     } finally {
       document.body.removeChild(pdfOverlay);
