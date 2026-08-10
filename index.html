@@ -3790,26 +3790,37 @@ async function drmGenerateReport(){
     const doc = new Document({ sections: [{ properties:{}, children }] });
     const docxBlob = await Packer.toBlob(doc);
 
-    // ── Build PDF via hidden HTML render ─────────────────────────────────
-    const pdfContainer = document.createElement('div');
-    pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif';
+    // ── Build PDF via visible on-screen render ────────────────────────────
+    // html2canvas is designed to capture elements as they actually appear on
+    // screen — off-screen/negative-position tricks are unreliable across
+    // browsers and produced a blank PDF. Instead we render a full-screen
+    // white overlay (with a "Generating..." label) directly in the viewport,
+    // capture it, then remove it. This is the standard, reliable approach.
+    const pdfOverlay = document.createElement('div');
+    pdfOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#fff;z-index:999999;overflow:auto;display:flex;flex-direction:column;align-items:center';
+    pdfOverlay.innerHTML = '<div style="padding:16px;font-size:13px;color:#888;font-family:Calibri,Arial,sans-serif">Rendering PDF…</div>';
+
+    const pdfContent = document.createElement('div');
+    pdfContent.style.cssText = 'width:700px;max-width:90vw;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif;';
     let pdfHtml = '';
     for(const e of validEntries){
       const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
       pdfHtml += `<div style="margin-bottom:24px">
-        <div style="font-size:14px;margin-bottom:8px">${e.sku.trim()} ${qtyStr}</div>
+        <div style="font-size:14px;margin-bottom:8px;color:#111">${e.sku.trim()} ${qtyStr}</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain">`).join('')}
+          ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain;display:block">`).join('')}
         </div>
       </div>`;
     }
-    pdfContainer.innerHTML = pdfHtml;
-    document.body.appendChild(pdfContainer);
+    pdfContent.innerHTML = pdfHtml;
+    pdfOverlay.appendChild(pdfContent);
+    document.body.appendChild(pdfOverlay);
+    document.body.style.overflow = 'hidden';
 
-    // Wait for every image in the hidden container to actually finish loading —
-    // html2canvas snapshots synchronously and will render blank/broken images
+    // Wait for every image to actually finish loading before snapshotting —
+    // html2canvas captures synchronously and renders blank/broken images
     // if it runs before the <img> elements have loaded their blob URLs.
-    const imgEls = [...pdfContainer.querySelectorAll('img')];
+    const imgEls = [...pdfContent.querySelectorAll('img')];
     await Promise.all(imgEls.map(imgEl => {
       if(imgEl.complete && imgEl.naturalWidth > 0) return Promise.resolve();
       return new Promise(resolve => {
@@ -3817,19 +3828,20 @@ async function drmGenerateReport(){
         imgEl.onerror = resolve; // don't block forever on a broken image
       });
     }));
-    // Extra safety: give the browser one more paint cycle before snapshotting
+    // Extra safety: give the browser a couple of paint cycles before snapshotting
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     let pdfBlob;
     try{
-      pdfBlob = await html2pdf().from(pdfContainer).set({
+      pdfBlob = await html2pdf().from(pdfContent).set({
         margin: 10,
         filename: fileBase+'.pdf',
         html2canvas: { scale:2, useCORS:true, logging:false },
         jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
       }).outputPdf('blob');
     } finally {
-      document.body.removeChild(pdfContainer);
+      document.body.removeChild(pdfOverlay);
+      document.body.style.overflow = '';
     }
 
     // ── Present download buttons ────────────────────────────────────────
