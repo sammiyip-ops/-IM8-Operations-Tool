@@ -3544,7 +3544,7 @@ function downloadFulfillmentTemplate(){
 // ─── TAB 7: DAMAGE REPORT GENERATOR ───────────────────────────────────────
 let drmEntries = [];
 let drmEntrySeq = 0;
-let drmLibsLoaded = { docx:false, html2pdf:false };
+let drmLibsLoaded = { docx:false, jspdf:false };
 
 function drmInit(){
   const dateInput = document.getElementById('drmDate');
@@ -3695,12 +3695,12 @@ async function drmEnsureLibs(){
     ], () => typeof window.docx !== 'undefined', 'docx (Word generator)');
     drmLibsLoaded.docx = true;
   }
-  if(!drmLibsLoaded.html2pdf){
+  if(!drmLibsLoaded.jspdf){
     await drmLoadScriptWithFallback([
-      'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js',
-      'https://unpkg.com/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js'
-    ], () => typeof window.html2pdf !== 'undefined', 'html2pdf.js (PDF generator)');
-    drmLibsLoaded.html2pdf = true;
+      'https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js',
+      'https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js'
+    ], () => typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined', 'jsPDF (PDF generator)');
+    drmLibsLoaded.jspdf = true;
   }
 }
 
@@ -3790,63 +3790,74 @@ async function drmGenerateReport(){
     const doc = new Document({ sections: [{ properties:{}, children }] });
     const docxBlob = await Packer.toBlob(doc);
 
-    // ── Build PDF via visible on-screen render ────────────────────────────
-    // html2canvas is designed to capture elements as they actually appear on
-    // screen — off-screen/negative-position tricks are unreliable across
-    // browsers and produced a blank PDF. Instead we render a full-screen
-    // white overlay (with a "Generating..." label) directly in the viewport,
-    // capture it, then remove it. This is the standard, reliable approach.
-    const pdfOverlay = document.createElement('div');
-    pdfOverlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;min-height:100vh;background:#fff;z-index:999999;display:flex;flex-direction:column;align-items:center';
-    pdfOverlay.innerHTML = '<div style="padding:16px;font-size:13px;color:#888;font-family:Calibri,Arial,sans-serif">Rendering PDF…</div>';
+    // ── Build PDF directly with jsPDF (no screenshot slicing) ────────────
+    // Manual layout with explicit page-break checks avoids the text
+    // duplication/cutoff artifacts that html2canvas-based slicing produces.
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+    const PAGE_W = pdf.internal.pageSize.getWidth();
+    const PAGE_H = pdf.internal.pageSize.getHeight();
+    const MARGIN = 15;
+    const USABLE_W = PAGE_W - MARGIN*2;
+    const IMG_MM = 55;       // each photo rendered at ~55mm square (mm units)
+    const IMG_GAP = 4;
+    const LABEL_H = 8;       // space for the "SKU (-qty)" text line
+    const ENTRY_GAP = 10;    // space between entries
 
-    const pdfContent = document.createElement('div');
-    pdfContent.style.cssText = 'width:700px;max-width:90vw;background:#fff;padding:20px;font-family:Calibri,Arial,sans-serif;';
-    let pdfHtml = '';
+    let cursorY = MARGIN;
+    let firstEntry = true;
+
     for(const e of validEntries){
       const qtyStr = e.qty ? `(-${e.qty})` : '(-0)';
-      pdfHtml += `<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">
-        <div style="font-size:14px;margin-bottom:8px;color:#111">${e.sku.trim()} ${qtyStr}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${e.images.map(img=>`<img src="${img.url}" style="max-width:220px;max-height:220px;object-fit:contain;display:block">`).join('')}
-        </div>
-      </div>`;
-    }
-    pdfContent.innerHTML = pdfHtml;
-    pdfOverlay.appendChild(pdfContent);
-    document.body.appendChild(pdfOverlay);
-    document.body.style.overflow = 'hidden';
+      const label = `${e.sku.trim()} ${qtyStr}`;
 
-    // Wait for every image to actually finish loading before snapshotting —
-    // html2canvas captures synchronously and renders blank/broken images
-    // if it runs before the <img> elements have loaded their blob URLs.
-    const imgEls = [...pdfContent.querySelectorAll('img')];
-    await Promise.all(imgEls.map(imgEl => {
-      if(imgEl.complete && imgEl.naturalWidth > 0) return Promise.resolve();
-      return new Promise(resolve => {
-        imgEl.onload = resolve;
-        imgEl.onerror = resolve; // don't block forever on a broken image
-      });
-    }));
-    // Extra safety: give the browser a couple of paint cycles before snapshotting
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    // Scroll to top so html2canvas's capture offset lines up with the overlay's
-    // top edge — a non-zero scroll position is a common cause of a blank leading page
-    window.scrollTo(0,0);
+      // How many image rows will this entry need, at IMG_MM per image, wrapping at USABLE_W?
+      const perRow = Math.max(1, Math.floor((USABLE_W + IMG_GAP) / (IMG_MM + IMG_GAP)));
+      const rows = Math.ceil(e.images.length / perRow);
+      const entryHeight = LABEL_H + rows*(IMG_MM+IMG_GAP);
 
-    let pdfBlob;
-    try{
-      pdfBlob = await html2pdf().from(pdfContent).set({
-        margin: 10,
-        filename: fileBase+'.pdf',
-        html2canvas: { scale:2, useCORS:true, logging:false, scrollX:0, scrollY:0 },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak: { mode: ['css','avoid-all'] }
-      }).outputPdf('blob');
-    } finally {
-      document.body.removeChild(pdfOverlay);
-      document.body.style.overflow = '';
+      // Page-break check: if this whole entry doesn't fit in the remaining space, start a new page
+      if(!firstEntry && cursorY + entryHeight > PAGE_H - MARGIN){
+        pdf.addPage();
+        cursorY = MARGIN;
+      }
+      firstEntry = false;
+
+      // SKU label
+      pdf.setFontSize(12);
+      pdf.setTextColor(17,17,17);
+      pdf.text(label, MARGIN, cursorY + 5);
+      cursorY += LABEL_H;
+
+      // Images, wrapping left-to-right
+      let colX = MARGIN;
+      let colCount = 0;
+      for(const img of e.images){
+        const dims = img._dims;
+        // Fit within IMG_MM square, preserving aspect ratio
+        const scale = Math.min(IMG_MM/dims.w, IMG_MM/dims.h);
+        const w = dims.w*scale, h = dims.h*scale;
+        // Convert PNG buffer to base64 data URL for jsPDF
+        if(!img._dataUrl){
+          const bytes = new Uint8Array(img._pngBuffer);
+          let binary = '';
+          for(let i=0;i<bytes.length;i++) binary += String.fromCharCode(bytes[i]);
+          img._dataUrl = 'data:image/png;base64,' + btoa(binary);
+        }
+        pdf.addImage(img._dataUrl, 'PNG', colX, cursorY, w, h);
+        colX += IMG_MM + IMG_GAP;
+        colCount++;
+        if(colCount >= perRow){
+          colCount = 0;
+          colX = MARGIN;
+          cursorY += IMG_MM + IMG_GAP;
+        }
+      }
+      if(colCount > 0) cursorY += IMG_MM + IMG_GAP; // close out a partial last row
+      cursorY += ENTRY_GAP;
     }
+
+    const pdfBlob = pdf.output('blob');
 
     // ── Present download buttons ────────────────────────────────────────
     dlArea.innerHTML = '';
