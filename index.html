@@ -3816,8 +3816,12 @@ async function drmGenerateReport(){
       const rows = Math.ceil(e.images.length / perRow);
       const entryHeight = LABEL_H + rows*(IMG_MM+IMG_GAP);
 
-      // Page-break check: if this whole entry doesn't fit in the remaining space, start a new page
-      if(!firstEntry && cursorY + entryHeight > PAGE_H - MARGIN){
+      // Page-break check: if this whole entry (label + all its photos) doesn't fit
+      // in the remaining space on the current page, start a fresh page BEFORE
+      // drawing anything — this guarantees the SKU label and its photos always
+      // stay together and are never split across a page boundary.
+      const SAFETY_BUFFER = 3; // mm — small margin of error to avoid edge-of-page clipping
+      if(!firstEntry && cursorY + entryHeight + SAFETY_BUFFER > PAGE_H - MARGIN){
         pdf.addPage();
         cursorY = MARGIN;
       }
