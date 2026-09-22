@@ -107,6 +107,7 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
   <div class="tab" onclick="switchTab(4)"><span class="tab-num">Tab 5</span>Gift Tracker</div>
   <div class="tab" onclick="switchTab(5)"><span class="tab-num">Tab 6</span>Courier Splitter</div>
   <div class="tab" onclick="switchTab(6)"><span class="tab-num">Tab 7</span>Damage Report</div>
+  <div class="tab" onclick="switchTab(7)"><span class="tab-num">Tab 8</span>Stock Check</div>
 </div>
 <div class="panels">
 
@@ -662,6 +663,84 @@ textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-si
       <button class="btn-dark" onclick="drmGenerateReport()" style="flex:1">Generate Word + PDF</button>
     </div>
     <div id="drmDownloadArea" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- TAB 8: STOCK CHECK -->
+<div class="panel" id="tab7">
+  <div class="card">
+    <div class="card-title">Stock Check — is on-hand sufficient for the order?</div>
+    <div style="font-size:12px;color:#555;margin-bottom:16px;padding:10px 14px;background:#f8f8f8;border-radius:8px;border:1px solid #eee;line-height:1.8">
+      Give it the SKUs you need to fulfill (paste a pivot, or upload a file — including the Gift Tracker's own output) and your on-hand inventory. It tells you which SKUs are covered, which are short, and which aren't in the inventory file at all.
+    </div>
+
+    <div class="input-tabs">
+      <button class="input-tab active" id="stkInTab0" onclick="stkSwitchInput(0)">Paste pivot table</button>
+      <button class="input-tab" id="stkInTab1" onclick="stkSwitchInput(1)">Upload file</button>
+    </div>
+    <div id="stkInputPaste">
+      <div class="section-label">Paste two-column pivot (SKU tab Quantity)</div>
+      <textarea id="stkPasteArea" placeholder="IM8-FG-000035&#10;17&#10;IM8-FG-000124&#10;11&#10;...&#10;&#10;Or tab-separated:&#10;IM8-FG-000035	17"></textarea>
+    </div>
+    <div id="stkInputUpload" style="display:none">
+      <div class="upload-zone" id="stkZone" onclick="document.getElementById('stkFile').click()">
+        <input type="file" id="stkFile" accept=".xlsx,.xls,.csv">
+        <div class="upload-icon">📄</div>
+        <div>Click to upload demand file</div>
+        <div class="upload-label">.xlsx or .csv — sales pivot, or the Gift Tracker's own output file</div>
+        <div class="upload-name" id="stkFileName"></div>
+      </div>
+    </div>
+
+    <br>
+    <div style="margin-bottom:12px">
+      <div class="section-label">🗂️ On-hand inventory</div>
+      <div class="upload-zone" id="stkInvZone" onclick="document.getElementById('stkInvFile').click()" style="padding:0.8rem">
+        <input type="file" id="stkInvFile" accept=".xlsx,.xls,.csv">
+        <div style="font-size:13px">Click to upload on-hand inventory</div>
+        <div class="upload-label">.xlsx or .csv</div>
+        <div class="upload-name" id="stkInvFileName"></div>
+      </div>
+    </div>
+
+    <button class="btn-dark" id="stkCheckBtn" disabled onclick="stkRunCheck()">Check stock</button>
+  </div>
+
+  <div id="stkResults" style="display:none">
+    <div class="card">
+      <div class="stats" id="stkStats">
+        <div class="stat"><div class="stat-n" id="stk-total">0</div><div class="stat-l">Total SKUs</div></div>
+        <div class="stat"><div class="stat-n s-ok" id="stk-sufficient">0</div><div class="stat-l">Sufficient</div></div>
+        <div class="stat"><div class="stat-n s-warn" id="stk-insufficient">0</div><div class="stat-l">Insufficient</div></div>
+        <div class="stat"><div class="stat-n" style="color:#dc2626" id="stk-missing">0</div><div class="stat-l">Missing from inventory</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#fafafa;border-bottom:1px solid #e5e7eb;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-right:4px">Filter:</span>
+        <button onclick="stkSetFilter('all')" id="stkF-all" style="padding:4px 12px;font-size:12px;background:#111;color:#fff;border-color:#111;border-radius:20px;font-weight:600">All</button>
+        <button onclick="stkSetFilter('insufficient')" id="stkF-insufficient" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#fff8f0;border-color:#d97706;color:#92400e">⚠️ Insufficient</button>
+        <button onclick="stkSetFilter('missing')" id="stkF-missing" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#fff5f5;border-color:#dc2626;color:#991b1b">❌ Missing</button>
+        <button onclick="stkSetFilter('sufficient')" id="stkF-sufficient" style="padding:4px 12px;font-size:12px;border-radius:20px;background:#f0fdf4;border-color:#16a34a;color:#166534">✅ Sufficient</button>
+      </div>
+      <div style="overflow-y:auto;overflow-x:hidden;max-height:600px;width:100%">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+          <colgroup>
+            <col style="width:26%"><col style="width:18%"><col style="width:18%"><col style="width:18%"><col style="width:20%">
+          </colgroup>
+          <thead>
+            <tr style="background:#f0f0f0;position:sticky;top:0;z-index:5;box-shadow:0 2px 4px rgba(0,0,0,0.08)">
+              <th onclick="stkToggleSkuSort()" id="stkSkuTh" style="cursor:pointer;user-select:none;padding:10px;text-align:left;font-size:12px;font-weight:700;color:#111">SKU <span id="stkSkuSortIcon" style="font-size:11px;opacity:0.7">↕</span></th>
+              <th style="padding:10px;text-align:center;font-size:12px;font-weight:700;color:#111">Demand qty</th>
+              <th style="padding:10px;text-align:center;font-size:12px;font-weight:700;color:#111">On-hand qty</th>
+              <th style="padding:10px;text-align:center;font-size:12px;font-weight:700;color:#111">Shortfall</th>
+              <th style="padding:10px;text-align:center;font-size:12px;font-weight:700;color:#111">Status</th>
+            </tr>
+          </thead>
+          <tbody id="stkTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3923,6 +4002,207 @@ async function drmGenerateReport(){
       <span style="color:#991b1b;font-size:11px">Check the browser console (F12) for full details, or try a different photo format (JPG/PNG work best).</span>
     </div>`;
   }
+}
+
+// ─── TAB 8: STOCK CHECK ────────────────────────────────────────────────────
+let stkInputMode = 0; // 0=paste, 1=upload
+let stkDemandFileData = null;
+let stkInvData = null;
+let stkResultsData = [];
+let stkFilter = 'all';
+let stkSkuSort = 'none';
+
+function stkSwitchInput(i){
+  stkInputMode = i;
+  document.getElementById('stkInTab0').classList.toggle('active', i===0);
+  document.getElementById('stkInTab1').classList.toggle('active', i===1);
+  document.getElementById('stkInputPaste').style.display = i===0 ? 'block' : 'none';
+  document.getElementById('stkInputUpload').style.display = i===1 ? 'block' : 'none';
+  stkCheckReady();
+}
+
+function stkCheckReady(){
+  const hasDemand = stkInputMode===0
+    ? document.getElementById('stkPasteArea').value.trim().length > 0
+    : stkDemandFileData !== null;
+  document.getElementById('stkCheckBtn').disabled = !(hasDemand && stkInvData);
+}
+
+document.getElementById('stkFile').addEventListener('change', function(){
+  if(!this.files[0]) return;
+  readFile(this.files[0], rows => {
+    stkDemandFileData = rows;
+    document.getElementById('stkFileName').textContent = this.files[0].name;
+    document.getElementById('stkZone').classList.add('has-file');
+    stkCheckReady();
+  });
+});
+
+document.getElementById('stkInvFile').addEventListener('change', function(){
+  if(!this.files[0]) return;
+  readFile(this.files[0], rows => {
+    stkInvData = rows;
+    document.getElementById('stkInvFileName').textContent = this.files[0].name;
+    document.getElementById('stkInvZone').classList.add('has-file');
+    stkCheckReady();
+  });
+});
+
+document.getElementById('stkPasteArea').addEventListener('input', stkCheckReady);
+
+// Parse demand: paste (two-column SKU/Qty) or uploaded file (SKU/Items + Quantity columns —
+// works with a plain sales pivot AND the Gift Tracker's own output, which uses "Items"/"Quantity")
+function stkGetDemand(){
+  const demand = {};
+  if(stkInputMode === 1 && stkDemandFileData){
+    const sr = stkDemandFileData[0];
+    const skuCol = findCol(sr, ['items','itemnumber','item number','itemnum','sku','item','row label']);
+    const qtyCol = findCol(sr, ['quantity','qty','sum']);
+    if(!skuCol || !qtyCol){
+      alert('Cannot detect SKU/Qty columns in the uploaded file. Found: '+Object.keys(sr).join(', '));
+      return null;
+    }
+    for(const r of stkDemandFileData){
+      const sku = String(r[skuCol]||'').trim();
+      const qty = parseInt(r[qtyCol])||0;
+      if(!sku || sku.toLowerCase().includes('total') || sku.toLowerCase().includes('grand')) continue;
+      demand[sku] = (demand[sku]||0) + qty;
+    }
+  } else {
+    const raw = document.getElementById('stkPasteArea').value.trim();
+    if(!raw){ alert('Please paste data first.'); return null; }
+    const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l);
+    let i = 0;
+    while(i < lines.length){
+      const parts = lines[i].split('\t');
+      if(parts.length >= 2){
+        const sku = parts[0].trim();
+        const qty = parseInt(parts[1])||0;
+        if(sku && !sku.toLowerCase().includes('total') && qty>0) demand[sku]=(demand[sku]||0)+qty;
+        i++;
+      } else {
+        const sku = lines[i].trim();
+        const qty = parseInt(lines[i+1])||0;
+        if(sku && !sku.toLowerCase().includes('total') && qty>0) demand[sku]=(demand[sku]||0)+qty;
+        i += 2;
+      }
+    }
+  }
+  return demand;
+}
+
+function stkRunCheck(){
+  const demand = stkGetDemand();
+  if(!demand) return;
+  if(Object.keys(demand).length === 0){
+    alert('No SKU/quantity pairs found — check the pasted data or uploaded file.');
+    return;
+  }
+
+  const ir = stkInvData[0];
+  const iSku = findCol(ir, ['itemnumber','item number','itemnum','sku','item']);
+  const iQty = findCol(ir, ['availablephysical','available physical','available','onhand','on hand','qty','quantity','physical']);
+  if(!iSku || !iQty){
+    alert('Cannot detect SKU/Qty columns in the inventory file. Found: '+Object.keys(ir).join(', '));
+    return;
+  }
+  const onHand = {};
+  for(const r of stkInvData){
+    const sku = String(r[iSku]||'').trim();
+    const qty = parseFloat(String(r[iQty]||'').replace(/,/g,''))||0;
+    if(sku) onHand[sku] = (onHand[sku]||0) + qty;
+  }
+
+  stkResultsData = Object.entries(demand).map(([sku, qty]) => {
+    const stock = onHand.hasOwnProperty(sku) ? Math.round(onHand[sku]) : null;
+    const missing = stock === null;
+    const shortfall = missing ? null : Math.max(0, qty - stock);
+    const sufficient = !missing && shortfall === 0;
+    return { sku, demandQty: qty, onHandQty: stock, shortfall, missing, sufficient };
+  }).sort((a,b) => a.sku.localeCompare(b.sku));
+
+  const total = stkResultsData.length;
+  const sufficientCount = stkResultsData.filter(r=>r.sufficient).length;
+  const missingCount = stkResultsData.filter(r=>r.missing).length;
+  const insufficientCount = total - sufficientCount - missingCount;
+
+  document.getElementById('stk-total').textContent = total;
+  document.getElementById('stk-sufficient').textContent = sufficientCount;
+  document.getElementById('stk-insufficient').textContent = insufficientCount;
+  document.getElementById('stk-missing').textContent = missingCount;
+  document.getElementById('stkResults').style.display = 'block';
+
+  stkSetFilter('all');
+}
+
+const STK_CHIP_STYLES = {
+  all:          {bg:'#111',color:'#fff',border:'#111'},
+  insufficient: {bg:'#fff8f0',color:'#92400e',border:'#d97706'},
+  missing:      {bg:'#fff5f5',color:'#991b1b',border:'#dc2626'},
+  sufficient:   {bg:'#f0fdf4',color:'#166534',border:'#16a34a'},
+};
+function stkSetFilter(f){
+  stkFilter = f;
+  ['all','insufficient','missing','sufficient'].forEach(k=>{
+    const btn = document.getElementById('stkF-'+k);
+    if(!btn) return;
+    const active = k===f;
+    const s = STK_CHIP_STYLES[k];
+    if(active){
+      btn.style.background='#111'; btn.style.color='#fff'; btn.style.borderColor='#111';
+      btn.style.fontWeight='700'; btn.style.boxShadow='0 2px 6px rgba(0,0,0,0.18)';
+    } else {
+      btn.style.background=s.bg; btn.style.color=s.color; btn.style.borderColor=s.border;
+      btn.style.fontWeight='400'; btn.style.boxShadow='';
+    }
+  });
+  stkRenderTable();
+}
+
+function stkToggleSkuSort(){
+  stkSkuSort = stkSkuSort==='asc' ? 'desc' : 'asc';
+  const icon = document.getElementById('stkSkuSortIcon');
+  if(icon){ icon.textContent = stkSkuSort==='asc'?'↑':'↓'; icon.style.opacity='1'; }
+  stkRenderTable();
+}
+
+function stkRenderTable(){
+  let rows = [...stkResultsData];
+  if(stkFilter==='insufficient') rows = rows.filter(r=>!r.missing && !r.sufficient);
+  else if(stkFilter==='missing') rows = rows.filter(r=>r.missing);
+  else if(stkFilter==='sufficient') rows = rows.filter(r=>r.sufficient);
+
+  if(stkSkuSort==='asc') rows.sort((a,b)=>a.sku.localeCompare(b.sku));
+  else if(stkSkuSort==='desc') rows.sort((a,b)=>b.sku.localeCompare(a.sku));
+
+  const tbody = document.getElementById('stkTableBody');
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:24px">No SKUs in this filter</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r=>{
+    let rowBg = '', statusBadge = '';
+    if(r.missing){
+      rowBg = 'background:#fff5f5';
+      statusBadge = '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600">❌ Not in inventory</span>';
+    } else if(r.sufficient){
+      rowBg = '';
+      statusBadge = '<span style="background:#f0fdf4;color:#15803d;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600">✅ Sufficient</span>';
+    } else {
+      rowBg = 'background:#fffdf0';
+      statusBadge = '<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600">⚠️ Short '+r.shortfall+'</span>';
+    }
+    const onHandStr = r.missing ? '<span style="color:#bbb">—</span>' : r.onHandQty;
+    const shortfallStr = r.missing ? '<span style="color:#bbb">—</span>' : (r.shortfall>0 ? r.shortfall : '<span style="color:#16a34a">0</span>');
+    return `<tr style="border-bottom:1px solid #f3f4f6;${rowBg}">
+      <td style="padding:9px 10px;font-family:monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.sku}</td>
+      <td style="padding:9px 10px;text-align:center;font-weight:600">${r.demandQty}</td>
+      <td style="padding:9px 10px;text-align:center">${onHandStr}</td>
+      <td style="padding:9px 10px;text-align:center;${r.shortfall>0?'color:#d97706;font-weight:700':''}">${shortfallStr}</td>
+      <td style="padding:9px 10px;text-align:center">${statusBadge}</td>
+    </tr>`;
+  }).join('');
 }
 
 
