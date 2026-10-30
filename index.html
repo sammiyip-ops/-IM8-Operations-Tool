@@ -3994,6 +3994,45 @@ let cartonSeq = 0;
 let cartonInited = false;
 let cartonPreviewTimer = null;
 
+// Built-in product names for carton labels (SKU → name). Add or edit lines here to update the list for everyone.
+const CARTON_NAMES = {
+  "IM8-FG-000151": "Longevity V2.2 - Travel Box Set (7ct)",
+  "IM8-FG-000266": "PET Can · 400 ml",
+  "IM8-FG-000267": "IM8 Socks · White · M",
+  "IM8-FG-000268": "IM8 Socks · White · L",
+  "IM8-FG-000276": "IM8 Towel · 30x60 cm",
+  "IM8-FG-000277": "IM8 Tattoo Stickers · Pack",
+  "IM8-FG-000278": "PET Cup · 400 ml",
+  "IM8-FG-000279": "IM8 Sticker Patches · Pack",
+  "IM8-FG-000283": "IM8 Table Cloth · 2.7x2.3 m",
+  "IM8-FG-000284": "IM8 x Inter Miami Signature Shaker",
+  "IM8-FG-000285": "IM8 x Inter Miami Cap · White",
+  "IM8-FG-000286": "Can Sealer · Automatic",
+  "IM8-FG-000287": "Tissue Paper · 50-pack",
+  "IM8-FG-000288": "IM8 Coaster · Pink",
+  "IM8-FG-000289": "IM8 Coaster · Red",
+  "IM8-FG-000290": "IM8 Yoga Strap",
+  "IM8-FG-000291": "Paper Straws · Red/White · 100-pack",
+  "IM8-FG-000303": "IM8 Sachet Key Chain",
+  "IM8-FG-000400": "Silver Bucket",
+  "IM8-FG-000292": "Can Sealer · Manual",
+  "IM8-FG-000256": "IM8 Sports Bag · Tyvek",
+  "IM8-FG-000304": "PET Can · 500 ml · Wilson",
+  "IM8-FG-000177": "IM8 Tennis Balls · Red · 3-pack",
+  "IM8-FG-000311": "IM8 Running Cap · White",
+  "IM8-FG-000369": "Crop Singlets - crossed line design - S",
+  "IM8-FG-000370": "Crop Singlets - crossed line design - M",
+  "IM8-FG-000371": "Crop Singlets - crossed line design - L",
+  "IM8-FG-000373": "Crop Singlets - dotted design - M",
+  "IM8-FG-000374": "Crop Singlets - dotted design - L",
+  "IM8-FG-000375": "Singlets - crossed line design - M",
+  "IM8-FG-000376": "Singlets - crossed line design - L",
+  "IM8-FG-000377": "Singlets - crossed line design - XL",
+  "IM8-FG-000378": "Singlets - dotted design - M",
+  "IM8-FG-000379": "Singlets - dotted design - L",
+  "IM8-FG-000380": "Singlets - dotted design - XL"
+};
+
 // Print-only CSS: when printing labels, hide the whole app and show only the label pages
 (function(){
   const s = document.createElement('style');
@@ -4026,9 +4065,10 @@ function cartonSaveName(sku, name){
 }
 function cartonLookupName(sku){
   if(!sku) return '';
-  const saved = cartonLoadNames();
+  const saved = cartonLoadNames();                 // 1. a name you typed yourself wins
   if(saved[sku]) return saved[sku];
-  if(typeof CATALOGUE !== 'undefined' && CATALOGUE[sku] && CATALOGUE[sku].desc) return CATALOGUE[sku].desc;
+  if(CARTON_NAMES[sku]) return CARTON_NAMES[sku];  // 2. the built-in carton label list
+  if(typeof CATALOGUE !== 'undefined' && CATALOGUE[sku] && CATALOGUE[sku].desc) return CATALOGUE[sku].desc;  // 3. GPS catalogue
   return '';
 }
 function cartonClearNames(){
